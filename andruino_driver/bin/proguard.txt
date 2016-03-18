@@ -1,0 +1,15 @@
+# view AndroidManifest.xml #generated:7
+-keep class es.andruino.andruino_driver.andruino_driver { <init>(...); }
+
+# onClick res/layout/master_chooser.xml #generated:44
+-keepclassmembers class * { *** cancelButtonClicked(...); }
+
+# onClick res/layout/master_chooser.xml #generated:37
+-keepclassmembers class * { *** newMasterButtonClicked(...); }
+
+# onClick res/layout/master_chooser.xml #generated:23
+-keepclassmembers class * { *** okButtonClicked(...); }
+
+# onClick res/layout/master_chooser.xml #generated:30
+-keepclassmembers class * { *** qrCodeButtonClicked(...); }
+
