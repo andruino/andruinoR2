@@ -72,7 +72,7 @@ public class andruinoROS_sensor_Wifi implements NodeMain {
 				
 				publisher.publish(str);
 				
-				Thread.sleep(5000);
+				Thread.sleep(1000);
 			}
 
 		});

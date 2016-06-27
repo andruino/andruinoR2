@@ -10,9 +10,16 @@
         android:layout_height="wrap_content"
         android:textSize="30dip" />
 
+    <Button
+        android:id="@+id/buttonapagar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Exit" />
+
     <org.ros.android.view.camera.RosCameraPreviewView
         android:id="@+id/ros_camera_preview_view"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent" />
+  
 
 </LinearLayout>

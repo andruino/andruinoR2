@@ -155,6 +155,7 @@ public class ImuPublisher implements NodeMain
 	        this.gyroTime = event.timestamp;
 		}
 		else if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR)
+		//else if(event.sensor.getType() == Sensor.TYPE_GAME_ROTATION_VECTOR)
 		{
 	        float[] quaternion = new float[4];
 	        SensorManager.getQuaternionFromVector(quaternion, event.values);

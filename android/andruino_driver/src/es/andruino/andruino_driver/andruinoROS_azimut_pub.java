@@ -67,16 +67,24 @@ public class andruinoROS_azimut_pub implements NodeMain {
 			@Override
 			protected void loop() throws InterruptedException {
 		
-				//Envio de mensaje por el puerto serie 
+
+				long now = System.currentTimeMillis();
+				
+				//Variables globales 
+				andruino_driver.gAzimut=oListener.azimut;
+				andruino_driver.gOmega=oListener.omega;
+				
+				// Envio de mensaje por el puerto serie 
 				// Formato Mensaje: iiiaaaXXXww###, donde XXX es el azimut
-				String wbuf = "iiiaaa" + String.valueOf((oListener.azimut)) + "ww" + "###";
+				//String wbuf = "iiiaaa" + String.valueOf((oListener.azimut)) + "ww" + String.valueOf((oListener.omega))+ "ww"+ String.valueOf((oListener.accelZ)) + "ww"+ String.valueOf((oListener.velZ)) + "ww" + String.valueOf((oListener.distZ)) +"ww###";
+				String wbuf = "iiiaaa" + String.valueOf((oListener.azimut)) +  "ww" + String.valueOf((oListener.omega)) + "ww###";
 				andruino_driver.mSerial.write(wbuf.getBytes());
 				
 				std_msgs.String str = publisher.newMessage();
-				str.setData("Azimut: " + wbuf);
+				str.setData(wbuf);
 				publisher.publish(str);
 				
-				Thread.sleep(300); //Sólo publica valores cada 300 ms !!!!!!!!!!!!!!!!
+				Thread.sleep(150); //Sólo publica valores cada 150 ms !!!!!!!!!!!!!!!!
 				
 
 			}
