@@ -1,3 +1,3 @@
 # andruinoR2. 
 
-Paco Lópéz dirigido por Fede. Enero-Marzo 2016. Será completado e breve
+Paco Lópéz dirigido por Fede. 2016. Será completado e breve
