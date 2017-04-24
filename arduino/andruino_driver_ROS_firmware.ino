@@ -1,31 +1,37 @@
 /*************************************************************************************************
- * Firmware de Arduino para robot Andruino R2
- * Version: 48 (sin limpiar !!!!!)
- * Autor: Paco López, dirigido por Federico Cuesta
- */
+ * Arduino Firmware for Andruino R2 ROS robot
+ * Version:  99
+ * Date: 2017-04-19
+ * Autors: Paco López, dirigido por Federico Cuesta
+ **************************************************************************************************/
 
 #include <math.h>
 
-#define Kvel 1.089 //10.0 //vel_lineal=Kvel*(omega_Der+omega_Izq), valor encontrado experimentalmente en test 7 (aqui si hay control proporcional!!)
-#define Komega 1.0 //20.0 //
+
+// Constantes a convertir en parámetros si es necesario
 
 #define DISTANCIA_RUEDAS 0.1490
 #define RADIO_RUEDA 0.01785
 
-#define SENSIBLE_US 10 //1 cm
-#define DISTANCIA_CALIBRACION 500 //50 cm
+#define SENSIBLE_US 10 
+#define DISTANCIA_CALIBRACION 500 
 
 
-#define PWMMAX 255
-#define PWMMIN 175
-#define PWMMEDIO 215
+#define omegaMIN 1.5 //Cuando realiza un giro puro
+#define omegaMAX 2.5
 
-#define omegaMIN 0.6
-#define omegaMAX 1.5
+#define velMAX 0.2 // Obtenida de repetir el test 7 para diferentes velocidades
+#define velMIN 0.1 //0.14
 
-#define velMAX 1.9
-#define velMIN 0.9
+#define Kp1050 40 //Constate proprocional del PD del test 5
 
+#define TEMPOTX 100 //Transmite cada 100 milisegundos.
+
+//////////////////////////////////////////////////////////////////////////
+// Pines de Arduino (Placa Andruino R2)
+//////////////////////////////////////////////////////////////////////////
+
+// Sensores Utrasonidos
 #define trigPin1 11
 #define echoPin1 12
 #define trigPin2 8
@@ -33,7 +39,7 @@
 #define trigPin3 4
 #define echoPin3 2
 
-
+// LDRs
 #define LDR1 0
 #define LDR2 1
 #define LDR3 2
@@ -42,7 +48,6 @@
 #define analogInputCen 1
 
 //Motores
-
 #define motorIAvance 9
 #define motorIRetroceso 10
 #define motorDAvance 5
@@ -52,54 +57,69 @@
 #define led 13
 
 //////////////////////////////////////////////////////////////////////////
+// Parámetros
+//////////////////////////////////////////////////////////////////////////
+float parameters[21];
+
+
+//////////////////////////////////////////////////////////////////////////
 // Definición de variables globales
 //////////////////////////////////////////////////////////////////////////
 
-//Variables es estado
+//////////////////////////////////////////////////////////////////////////
+//Variables de estado
+//////////////////////////////////////////////////////////////////////////
 int estado = 0;
 float azimut = 0;
 float omega = 0;
+
 float x = 0;
 float y = 0;
-
+float azimut_odometry = 0;
+float azimut_odometry_iiikkk = 0;
+//////////////////////////////////////////////////////////////////////////
 //Valores de sensores
+//////////////////////////////////////////////////////////////////////////
+
 int valores[10];
 
-
-//float omegaAnterior = 0;
-//float omegaLP = 0;
 int incPWM = 0;
 unsigned long tiempoOmega = 0; //tiempoEstado1080
 float mediaOmega = 0;
+unsigned long  tiempoEstado1040 = 0;
 
 // Variables Estado 1080
 // Representación gráfica (lineal) PWM-Velocidad Angular
 float PWM_Omega[8]; // Valores de velocidad angular máximo y mínimos, Orden: D_avanza, I_avanza, D_retrocede, I_retrocede
 int numOmegas;      // Numero de omegas para promediar
 
-
-
 // Variables Estado 1050, pid en velocidad angular
 unsigned long  tiempoEstado1050 = 0;
-
-unsigned long incTErrPWM = 0;
-unsigned long tErrPWM = 0;
-unsigned long tErrPWMAnt = 0;
-
-float errorPWMAnterior = 0;
-float errorPWMSum = 0;
-float errorPWMDiff = 0;
 
 float outPID = 0;
 int outPIDPWM = 0;
 
 //PID
-float errorAzimut = 0;
+float errorAzimut = 0; //error P
+float errorAzimutD = 0;  //error D
+float errorAzimutI = 0; //error I
+float errorAzimutAnterior = 0;
+unsigned long tiempoAzimutAnterior;
+int estadoPID = -1;
+int salPID;
+
+//PD
+int outPD;
 
 //Variables de azimut relaciondas con odometria
 float timeAzimut = 0;
 float dtAzimut = 0;
 float incAzimut = 0;
+
+//PID_arco
+float omega_estimada;
+float errorOmega;
+int  outPID_arco;
 
 //Variables Estado 1060, pid en angulo
 unsigned long  tiempoEstado1060 = 0;
@@ -114,110 +134,103 @@ unsigned long incTiempoEstado1070;
 unsigned long tiempoEstado1070 = 0;
 float velEstado1070 = 0;
 
+//Variables -estao 1100
+float omegaLP;
 
 //Variables Estado 11 (1110), prueba la función de giro
 unsigned long tiempoEstado1110 = 0;
 int contadorEstado1110 = 0; //Contador de estado de sobreoscilaciones del PD de giro
 
-//Variables de la recepcion de comando en formato Twist
-//String cmdVelStr;
-//String cmdOmegaStr;
-float cmdVel;
-float cmdOmega;
 
+//Variables Estado 14 (1140), describe media circunferencia
+unsigned long tiempoEstado1140 = 0;
+float azimutEstado1140;
+
+//Variables de la recepcion de comando en formato Twist
+float cmdVel;
+float cmdVelAnterior = 0; // En caso de que reciba orden con el mismo valor no actuliza AzimutRef, manteniendo el anterior
+float cmdOmega;
+float cmdAzimut;
 float ICCR; // Radio de curvatura
 float incOme; //Incremento de omega/dt, estimado por las velocidades angulesy la geometria del robot.
 
-
 //Variabes de l Sensor Wifi
-/*
 int beacon = 0;
-int beaconAnterior = 0;
+int beaconAnterior = -1;
 int diffBeacon = 0;
 int incOffSet = 0;
 int filabeacon = 0;
 int LDROffset = 0;
-*/
 
-
-
-//Cadenas de entrada de datos (posiblemente puede ser reducidas el numero de variables !!!
+//Cadenas de entrada de datos
 String inputString = "";
-//String auxString = "";
 String trozo1Str = "";
 String trozo2Str = "";
-//String trozo3Str = "";
+String trozo3Str = "";
 
-//String motor1Str = "";
-//String motor2Str = "";
-//String azimutStr = "";
-//String omegaStr = "";
-//String trozo1Str = "";
-//String paramTestStr = "";
-//String cmdBeaconStr = "";
-
-
+// Flag de cadena recibida
 boolean commandComplete = false;
-//int orden = 0;
-//char Char[8] =";
 
-
-
-
-//Variables para el calculo de velocidad y posición basada en sensor de distancia (odometria fake)
-//unsigned long tiempoAntes = -1;
-//unsigned long tiempoDespues = -1;
-//unsigned long incrementoTiempo;
-//unsigned long tiempoFinTest;
-//unsigned long auxiliarlong;
-//int incrementoDistancia;
-//int incDistTiempoAcc;
-//int valoresAntes[10];
-//int flag_movimiento = 0;
-
-// VAriables globales del programa de 2010
-/*
-// Variables globales
-//int valor = 255;
+// VAriables globales de Test3
 int value = 0;
 //Movimientos del motor izquierdo y derecho
 int moveMI = 0;
 int moveMD = 0;
 //Valores de los sensores, LDRdiff y LDRmedia
-int LDRIzq = 0;
+int LDRIzq = 0; //sustituir por valores (3,4,5) !!!!
 int LDRCen = 0;
 int LDRDer = 0;
 int LDRdiff = 0; //diferencia antes del ensayo
-int LDRsigno = 0;
+//int LDRsigno = 0;
 int LDRdiffpost = 0; // diferencia después del ensayo
 int LDRmedia = 0; //media antes del ensayo
 int LDRmediapost = 0; // media despues del ensayo
-//int LDROffSet = 0;
-int threshold = 200;
-int fila; // Fila de la matriz
-int filaMD; // Fila de motor derecho
-int filaMI; // Fila de motor izquierdo
-//Matrices Entrada / Salida
-// Para obtener velocidad variable
-//int ESMD[3][3]={{-200,0,200},{-200,0,200},{-200,0,200}};
-//int ESMI[3][3]={{-200,0,200},{-200,0,200},{-200,0,200}};
-//int ESMD[9] = { -200, 0, 200, -200, 0, 200, -200, 0, 200}; //Matrices sustituidas por vectores por bug en compilador
-//int ESMI[9] = { -200, 0, 200, -200, 0, 200, -200, 0, 200};
+int LDRIzqpost = 0;
+int LDRDerpost = 0;
+int LDRCenpost = 0;
 
-//Matrices de Base de Conocimiento
-//int BD[3][3]={{0,0,0},{0,0,0},{0,0,0}}; //Experencia del motor 1
-//int BI[3][3]={{0,0,0},{0,0,0},{0,0,0}}; //Experencia del motor 2
+int USIzq = 0; //sustituir por valores (3,4,5) !!!!
+int USCen = 0;
+int USDer = 0;
+int USdiff = 0; //diferencia antes del ensayo
+//int LDRsigno = 0;
+int USdiffpost = 0; // diferencia después del ensayo
+int USmedia = 0; //media antes del ensayo
+int USmediapost = 0; // media despues del ensayo
+int USIzqpost = 0;
+int USDerpost = 0;
+int USCenpost = 0;
+int USOffset = 0;
+
+int fila; // Fila de la matriz
+
 int BCMD[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; //Matrices sustituidas por vectores por bug en compilador
 int BCMI[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-int BCOffSet[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; //Base de conocimiento del offset de ldr
 
-//Fin de variables de 2010
-*/
+int auxX; //sutituir por i
+int auxY; //sustitir por j
+int i;
+int j;
+//Fin de  Test 3
 
-// Tiempo d ejecución de loop principal
-unsigned long timeLoop;
+int indice = -1;
+
+
+//////////////////////////////////////////////////////////////////////////
+// Variables de Tiempo d ejecución de loop principal
+//////////////////////////////////////////////////////////////////////////
+unsigned long timeLoop; //Tiempo de ciclo
 unsigned long dtLoop;
+unsigned long timeTx; //Tiempo de transmision, para evitar que sea en cada ciclo (y así bajar consumo de CPU en Android)
+unsigned long dtTx;
 
+//////////////////////////////////////////////////////////////////////////
+// Variables para cálculo de la distancia en tiempo de ejecución en movimiento
+// en línea recta, basada en sensor central de ultrasonidos
+//////////////////////////////////////////////////////////////////////////
+float distanciaUS = -1.0;
+float distanciaUS_inicial = -1.0;
+float distanciaUS_anterior = -1.0;
 
 //////////////////////////////////////////////////////////////////////////
 // Setup
@@ -226,10 +239,11 @@ unsigned long dtLoop;
 void setup() {
 
   timeLoop = millis();
+  timeTx = millis();
 
-  // initialize serial communication:
+  // Inicia comunicación serie
   Serial.begin(115200);//Serial.begin(9600);
-  inputString.reserve(200);
+  inputString.reserve(300);
   Serial.println("Andruino ROS##Paco Lopez##2015-2016");
 
   // Prueba motores
@@ -246,10 +260,61 @@ void setup() {
   pararMotores();
   // Fin Prueba motores
 
+  // Inicia parametros
+  //1-2 Factores de correción entre la velocidad dada en el comando y la que se debe aplicar para que en la práctica se obtenga la deseada en el robot real
+  parameters[0] = 1.1; //Kvel = 1.1; //1.089 //vel_lineal=parameters[0]*(omega_Der+omega_Izq), valor encontrado experimentalmente en test 7
+  parameters[1] = 1.0; //Komega = 1.0;
+
+  //3-5 Parámetros del modelo cinemático
+  parameters[2] = 8.34; //Kssr = 8.34; //Modificacion del radio de las ruedas, para hacer equivalente el modelo Skid Steer al Diferencial
+  parameters[3] = 1.65;//Kssb = 1.65; //Modificacion de la distancia entre ruedas, para hacer equivalente el modelo Skid Steer al Diferencial
+  parameters[4] = 1; //KssIccr = 1; //Modificacion del radio de curvatura, para hacer equivalente el modelo Skid Steer al Diferencial
+
+  //6-9 Parámetros de la línea entre PWM y omega
+  parameters[5] = 111.5; //SlopeLeft = 111.5; // Pendiente de la relación entre PWM y velodidad angular de rueda izquierda
+  parameters[6] = 112.41; //OffsetLeft = 112.41; // Offset de la relación entre PWM y velodidad angular de rueda izquierda
+  parameters[7] = 101.5; //SlopeRight = 101.5;
+  parameters[8] = 103.41; //OffsetRighet = 103.41;
+
+  //10-12 Parámetros de los PID, para movimiento en línea recta, giro y movimiento en curva
+
+  parameters[9] = 200.0; //100.0; //KpLine = 100; //80; //80 Ajustado experimentalmente
+  parameters[10] = 3.0; //KiLine = 3;
+  parameters[11] = 0.0; //KdLine = 0 ;
+
+  //13-15 Parámetros de los PID, para movimiento en  giro
+  parameters[12] = 30.0; //KpSpin = 30;
+  parameters[13] = 0.0 ; //KiSpin = 0;
+  parameters[14] = 0.0; //KdSpin = 0;
+
+  //16-18 Parámetros de los PID, para movimiento en arco
+  parameters[15] = 10.0; //KpArc = 10;
+  parameters[16] = 0.0; //KiArc = 0;
+  parameters[17] = 0.0; //KdArc = 0;
+
+  //19-20 Parámetros de los valores de PWM máximos y mínimos que hacen que se mueva el robot
+
+  parameters[18] = 255.0; //PWMAX = 255;
+  parameters[19] = 155.0; //PWMMIN = 155;
+
+  //int PWMMEDIO = (((int)parameters[18]) + ((int)parameters[19])) / 2;
+
   // Inicia el estado
   estado = 0; //Estado normal esperando algún comando.
   x = 0;
   y = 0;
+  azimut_odometry = 0; //Valor inicial
+
+  // Inicia matrix de conocimiento de test 3 (estado 1030)
+
+  for (j = 0; j < 3; j++) {
+    for (i = 0; i < 3; i++) {
+
+      BCMI[i + (3 * j)] = 0;
+      BCMD[i + (3 * j)] = 0;
+    }
+
+  }
 
 }
 
@@ -260,35 +325,20 @@ void setup() {
 
 void loop()
 {
-
+  /////////////////////////////////////////////////////////////
   //Variables locales
+  /////////////////////////////////////////////////////////////
+
   int i, j;
   float distancia_anterior;
 
+  /////////////////////////////////////////////////////////////
   //Calculo del tiempo de Loop Principal
+  /////////////////////////////////////////////////////////////
   dtLoop = millis() - timeLoop;
 
-  //Calculo de la distancia recorrida, si se esta moviendo por un comando Twist (Estados 2000s)
-  distancia_anterior = distancia;
-  if (timeLoop != 0 && estado >= 2000 && estado < 3000) {
-    distancia += (cmdVel * dtLoop) / 1000;
-  }
   //Actualización del tiempo, para la siguiente pasada del bucle
   timeLoop = millis();
-
-  //Estimación (x,y), tras recibir un comando de Twist. Supone que donde se enciende es el 0,0 y el azimut 0 el que indica el giróscopo (Drift!!!!: FALTA Mejorarlo usando los sensores de Ultrasonidos)
-  //Calculo de la posición x,y,omega (para valores del estado del rango de 2000's). Basada en la geometría.
-  if (estado == 2010) { //Anda en línea recta
-    x += (distancia - distancia_anterior) * cos(azimut);
-    y += (distancia - distancia_anterior) * sin(azimut);
-  } else if (estado == 2020) { //Gira
-    //No actualiza los valores de x e y.
-  } else if (estado == 2000) { //Realiza un arco de circunferencia, vel!=0 y omega!=0
-    /* Lo calcula cunado recibe datos de azimut
-     x+= -sin(azimut) + ICCR * sin(azimut+(incOme*dtLoop/1000));
-     y+= -cos(azimut) - ICCR * cos(azimut+(incOme*dtLoop/1000));
-    */
-  }
 
   /////////////////////////////////////////////////////////////
   //Sensores Ultrasonidos
@@ -307,12 +357,50 @@ void loop()
   valores[5] = analogRead(LDR3); // Leemos el valor de A2.
 
   /////////////////////////////////////////////////////////////
+  // Calculo de coordenadas X,Y
+  /////////////////////////////////////////////////////////////
+
+  //Calculo de la distancia recorrida (estimación basado en la velocidad indicada y en el tiempo transcurrido), si se esta moviendo por un comando Twist (Estados 2000s)
+  distancia_anterior = distancia;
+  if (timeLoop != 0 && (estado >= 2000 && estado < 3000)) {
+    //distancia += (cmdVel * (float)dtLoop) / 1000L;
+    distancia += (cmdVel * (float)dtLoop); //En mm
+  }
+
+  if (timeLoop != 0 && estado == 1060) {
+
+    //distancia += (0.15 * (float)dtLoop) / 1000L;
+    distancia += (0.15 * (float)dtLoop); //En mm
+
+  }
+
+  //Estimación (x,y), tras recibir un comando de Twist. Supone que donde se enciende es el 0,0 y el azimut 0 el que indica el giróscopo (Drift!!!!: FALTA Mejorarlo usando los sensores de Ultrasonidos)
+  //Calculo de la posición x,y,omega (para valores del estado del rango de 2000's). Basada en la geometría.
+  if (estado == 2010 || estado == 1060) { //Anda en línea recta
+    //x += (distancia - distancia_anterior) * cos(azimut_odometry);
+    //y += (distancia - distancia_anterior) * sin(azimut_odometry);
+    x += (distancia - distancia_anterior) * cos((azimut_odometry_iiikkk / 10000L));
+    y += (distancia - distancia_anterior) * sin((azimut_odometry_iiikkk / 10000L));
+  } else if (estado == 2020) { //Gira
+    //No actualiza los valores de x e y.
+  } else if (estado == 2000) { //Realiza un arco de circunferencia, vel!=0 y omega!=0
+    /* Lo calcula cunado recibe datos de azimut
+     x+= -sin(azimut) + ICCR * sin(azimut+(incOme*dtLoop/1000));
+     y+= -cos(azimut) - ICCR * cos(azimut+(incOme*dtLoop/1000));
+    */
+  }
+
+  /////////////////////////////////////////////////////////////
   // Tx valores del sensor al Android
   /////////////////////////////////////////////////////////////
 
   //Si está calibrando o haciendo test no muestra valores de los sensores
+
   //if (estado != 1040 && estado != 1041 && estado != 1050 && estado != 1060 && estado != 1070) {
-  if (estado < 1040 || estado >= 2000) {
+
+  dtTx = millis() - timeTx;
+  if ((estado < 1030 || estado >= 2000) && (dtTx > TEMPOTX)) {
+
     // TX datos ultasonidos y ldr al Android
     // Estructura de Mesaje: ooosssUS1wwUS2wwUS3wwLDR1wwLDR2wwLDR3wwTiempoLoopwwwwDistanciaRecorridaTwistwwXwwYwwAzimut###
     Serial.print("ooosss");
@@ -322,132 +410,199 @@ void loop()
     }
     Serial.print(String(dtLoop));
     Serial.print("ww");
-    Serial.print(String(distancia));
+    Serial.print((distancia * 1000.0), 4);
     Serial.print("ww");
-    Serial.print(String(x));
+    Serial.print((x * 1000.0), 4);
     Serial.print("ww");
-    Serial.print(String(y));
+    Serial.print((y * 1000.0), 4);
     Serial.print("ww");
-    Serial.print(String(azimut));
+    Serial.print(azimut_odometry_iiikkk, 4);
+    //Serial.print(String((int)(azimut * 1000)));
+    //Serial.print(String((int)(azimut_odometry * 1000)));
+    //Serial.print( String((int)(1000.0*atan2(sin(azimut_odometry), cos(azimut_odometry)))));
+    Serial.print("ww");
+    Serial.print(String(estado)); //Cambio septiembre 2016
     Serial.print("ww");
     Serial.print("###"); // Fin de mensaje
     Serial.println("");
 
+    timeTx = millis();
+
   }
+  //}
 
   /////////////////////////////////////////////////////////////
   // RX datos desde Android.
   /////////////////////////////////////////////////////////////
 
-
   if (commandComplete) {
-    //Serial.println(inputString); // PAra verificar si el Android manda bien
-    //Busca el principio de la cadena y sumo tres carracteres (correspondientes a ese principio de la cadena) y busco el final del primer campo con &&
-    //auxString=inputString.substring(inputString.indexOf("@@@")+3,inputString.indexOf("&&"));
 
-    //Depuración devuelve lo que recib@
-    //Serial.println("Mensaje Recibido");
-    //Serial.println(inputString);
-    //Serial.println("###");
-
-    //IMPORTANTE: CAMBIOAR POR SWITH/CASE FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
     if (inputString.startsWith("iiimmm")) {
 
-      //String motor1Str = inputString.substring(inputString.indexOf("mmm") + 3, inputString.indexOf("ww"));
-      //String motor2Str = inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("ww###"));
-
-      //motoresPWM(motor1Str.toInt(), motor2Str.toInt());
       motoresPWM(inputString.substring(inputString.indexOf("mmm") + 3, inputString.indexOf("ww")).toInt(), inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("ww###")).toInt());
-
-      /* ALORA!!!
-      if (motor1Str.toInt() > 0) {
-        analogWrite(motorDAvance, motor1Str.toInt());
-        analogWrite(motorDRetroceso, 0);
-      } else {
-        analogWrite(motorDAvance, 0);
-        analogWrite(motorDRetroceso, abs(motor1Str.toInt()));
-      }
-
-      if (motor2Str.toInt() > 0) {
-        analogWrite(motorIAvance, motor2Str.toInt());
-        analogWrite(motorIRetroceso, 0);
-      } else {
-        analogWrite(motorIAvance, 0);
-        analogWrite(motorIRetroceso, abs(motor2Str.toInt()));
-      }
-      */
-
-
-      // Suponemos que si recibe en algun motor un valor por encima de 150 de pwm se mueve (VERIFICAR)
-      /*
-      if (motor1Str.toInt() >= 150 or motor2Str.toInt() >= 150) {
-        flag_movimiento = 1; //Recibio una orden de movimiento, va a calcular la velocidad / posicion
-      } else {
-        flag_movimiento = 0;
-      }
-      */
-      //Tiempo que mantengo motores funcionando 3 segundos
-      //delay(tiempoAccion);
       delay(3000);
-
-      // Para motores e inicia el estado
       pararMotores();
       estado = 0;
-
 
       // clear the string:
       inputString = "";
       commandComplete = false;
     }
 
+    //VSA
+    else if (inputString.startsWith("iiiqqq")) {
+
+      if (estado == 1160) {
+        pararMotores();
+        //delay(50);
+
+        //Tomo valores actuales de sensores
+        //Lee los valores de las LDR y calcula sus diferencias
+        LDROffset = 0;
+        LDRIzq = analogRead(analogInputIzq);
+        LDRDer = analogRead(analogInputDer);
+        LDRCen = analogRead(analogInputCen);
+        LDRdiff = LDRIzq - LDRDer + LDROffset;
+        LDRmedia = (LDRIzq + LDRDer) / 2;
+
+        USOffset = 0;
+        USDer = leeUS(echoPin1, trigPin1);
+        if (USDer == 0)
+          USDer = 3000;
+        USCen = leeUS(echoPin2, trigPin2);
+        if (USCen == 0)
+          USCen = 3000;
+        USIzq = leeUS(echoPin3, trigPin3);
+        if (USIzq == 0)
+          USIzq = 3000;
+
+        USdiff = USIzq - USDer + USOffset;
+        USmedia = (USDer + USCen + USIzq) / 3;
+
+
+        //Se mueve
+        trozo1Str = inputString.substring(inputString.indexOf("qqq") + 3, inputString.indexOf("ww###"));
+        /* Movimientos
+         * 0 para
+         * 1 gira derecha (dextrogiro)
+         * 2 gira izquierda
+         * 3 avanza
+         * 4 retrocede
+         * 5 derecha_para, izquierda_adelante
+         * 6 derecha_para, izquierda_atras
+         * 7 izq_para, derecha_adelante
+         * 8 izq_para, derecha_atras
+         */
+
+        switch (trozo1Str.toInt()) {
+          case 0:
+            pararMotores();
+            break;
+          case 1:
+            analogWrite(motorIAvance, 0);
+            analogWrite(motorIRetroceso, 250);
+            analogWrite(motorDAvance, 250);
+            analogWrite(motorDRetroceso, 0);
+            break;
+          case 2:
+            analogWrite(motorIAvance, 250);
+            analogWrite(motorIRetroceso, 0);
+            analogWrite(motorDAvance, 0);
+            analogWrite(motorDRetroceso, 250);
+            break;
+          case 3:
+            analogWrite(motorIAvance, 250);
+            analogWrite(motorIRetroceso, 0);
+            analogWrite(motorDAvance, 250);
+            analogWrite(motorDRetroceso, 0);
+            break;
+          case 4:
+            analogWrite(motorIAvance, 0);
+            analogWrite(motorIRetroceso, 250);
+            analogWrite(motorDAvance, 0);
+            analogWrite(motorDRetroceso, 250);
+            break;
+          case 5:
+            analogWrite(motorIAvance, 250);
+            analogWrite(motorIRetroceso, 0 );
+            analogWrite(motorDAvance, 0);
+            analogWrite(motorDRetroceso, 0);
+            break;
+          case 6:
+            analogWrite(motorIAvance, 0);
+            analogWrite(motorIRetroceso, 250);
+            analogWrite(motorDAvance, 0);
+            analogWrite(motorDRetroceso, 0);
+            break;
+          case 7:
+            analogWrite(motorIAvance, 0);
+            analogWrite(motorIRetroceso, 0);
+            analogWrite(motorDAvance, 250);
+            analogWrite(motorDRetroceso, 0);
+            break;
+          case 8:
+            analogWrite(motorIAvance, 0);
+            analogWrite(motorIRetroceso, 0);
+            analogWrite(motorDAvance, 0);
+            analogWrite(motorDRetroceso, 250);
+            break;
+          default:
+            pararMotores();
+            estado = 0; //Si recibe una accion no esperado sale del modo vsa 1160
+        }
+        //Se mueve durante el tiempo indicado
+        delay(200);
+
+        //Se detiene
+        pararMotores();
+        auxX = 0;
+        //delay(50); //Cambiar por comparacion con timer para que no pare la recepcion de órdenes!!!!
+
+        // Verifica resultado de movimiento realizado.
+        LDRIzqpost = analogRead(analogInputIzq);
+        LDRDerpost = analogRead(analogInputDer);
+        LDRdiffpost = LDRIzqpost - LDRDerpost + LDROffset;
+        LDRmediapost = (LDRIzqpost + LDRDerpost) / 2;
+
+        USDerpost = leeUS(echoPin1, trigPin1);
+        if (USDerpost == 0 || USDer == 3000) //Si alguna de las dos medidas no son válidas, hace los dos valores 3000, para que no afecte al calculo de la media de distancia
+          USDerpost = 3000;
+        USCenpost = leeUS(echoPin2, trigPin2);
+        if (USCenpost == 0 || USCen == 3000)
+          USCenpost = 3000;
+        USIzqpost = leeUS(echoPin3, trigPin3);
+        if (USIzqpost == 0 || USIzq == 3000)
+          USIzqpost = 3000;
+        USdiffpost = USIzqpost - USDerpost + USOffset;
+        USmediapost = (USDerpost + USCenpost + USIzqpost) / 3;
+
+        //Envia los dato al nodo VSA
+        Serial.print("oooccc" + String(LDRIzq) + "ww" + String(LDRCen) + "ww" + String(LDRDer) + "ww" +   String(LDRIzqpost) + "ww" + String(LDRCenpost) + "ww" + String(LDRDerpost) + "ww");
+        Serial.print(String(USIzq) + "ww" + String(USCen) + "ww" + String(USDer) + "ww" +   String(USIzqpost) + "ww" + String(USCenpost) + "ww" + String(USDerpost) + "ww");
+        Serial.print ( trozo1Str +  "ww" + "###");
+        Serial.println("");
+
+      }
+
+      // clear the string:
+      inputString = "";
+      commandComplete = false;
+    }
+    //FIN DE VSA
+
     else if (inputString.startsWith("iiiaaa")) {
 
-      //azimutStr = inputString.substring(inputString.indexOf("aaa") + 3, inputString.indexOf("ww"));
-      //omegaStr = inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("ww###"));
       trozo1Str = inputString.substring(inputString.indexOf("aaa") + 3, inputString.indexOf("ww"));
       trozo2Str = inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("ww###"));
 
       //Calcula el incremento del azimut respecto al valor anterior, antes de refrescar la variable azimut. Y los valores del incremento del tiempo y del tiempo
-      //incAzimut = trozo1Str.toFloat() - azimut;
-      incAzimut= atan2(sin(trozo1Str.toFloat() - azimut), cos(trozo1Str.toFloat() - azimut));
+      incAzimut = trozo1Str.toFloat() - (azimut * 10000.0);
       dtAzimut = millis() - timeAzimut;
       timeAzimut = millis();
 
       //Nuevo valores de azimut y omega
-      azimut = trozo1Str.toFloat();
-      omega = trozo2Str.toFloat();
-
-      // Si se desvía, ejecuto PID sobre ángulo
-      // radians = (degrees * 71) / 4068
-
-
-      //errorAzimut = azimutTest - azimut;
-      //errorAzimut = atan2(sin(errorAzimut), cos(errorAzimut)); //Para que esté entre -pi  pi
-      //degrees = (radians * 4068) / 71
-      //errorAzimutGrados = (int)((errorAzimut * 4068) / 71);
-
-      if (estado == 2000 && incAzimut != azimut) { //Realiza un arco de circunferencia, vel!=0 y omega!=0
-        x +=  ICCR * (sin(azimut + incAzimut) - sin(azimut));
-        y += ICCR * (cos(azimut) - cos(azimut + incAzimut));
-        Serial.println("(cmd_ omegaIzq(Kvel * cmdVel, Komega * cmdOmega))");
-        Serial.println((cmd_omegaIzq(Kvel * cmdVel, Komega * cmdOmega)));
-        Serial.println("(cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega))");
-        Serial.println((cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega)));
-        Serial.println("ICCR");
-        Serial.println(ICCR);
-        Serial.println("azimut");
-        Serial.println(azimut);
-        Serial.println("incAzimut");
-        Serial.println(incAzimut);
-        
-      }
-
-      if (estado == 1011 || estado == 1012) {
-        /*
-        Eliminado
-        */
-      }
-
+      azimut = trozo1Str.toFloat() / 10000.0;
+      omega = trozo2Str.toFloat() / 10000.0;
 
       //////////////////////////////////////////////////////////////////////////
       // Estado 1080 y siguientes 1081,1082,1083:
@@ -483,9 +638,7 @@ void loop()
 
         }
 
-        // Despues de 10 segundos girando y aumentando el PWM entre la diferencia de PWMMAX y PWMMIN, cambia de sentido
-
-
+        // Despues de 10 segundos girando y aumentando el PWM entre la diferencia de ((int)parameters[18]) y ((int)parameters[19]), cambia de sentido
 
         if (abs(omega) > 0.02) {
           numOmegas += 1;
@@ -493,44 +646,34 @@ void loop()
         }
 
 
-        if ((tiempoOmega + 20000) < millis() && incPWM <= PWMMAX) {
+        if ((tiempoOmega + 20000) < millis() && incPWM <= ((int)parameters[18])) {
           int aux;
           pararMotores();
           delay(500);
           tiempoOmega = millis();
-          aux = 2 * (estado - 1080) + ((incPWM - PWMMIN) / (PWMMAX - PWMMIN));
+          aux = 2 * (estado - 1080) + ((incPWM - ((int)parameters[19])) / (((int)parameters[18]) - ((int)parameters[19])));
           PWM_Omega[aux] = (float)(mediaOmega / numOmegas);
-          Serial.println(";" + String(aux) + ";" + incPWM + ";" + String(PWM_Omega[aux]) + ";" + String(mediaOmega) + ";" + String(numOmegas)  + ";" + "###");
+          //Serial.println(";" + String(aux) + ";" + incPWM + ";" + String(PWM_Omega[aux]) + ";" + String(mediaOmega) + ";" + String(numOmegas)  + ";" + "###");
+          Serial.println("oooccc" + String(aux) + "ww" + incPWM + "ww" + String(PWM_Omega[aux]) + "ww" + String(mediaOmega) + "ww" + String(numOmegas)  + "ww" + "###");
           mediaOmega = 0;
           numOmegas = 0;
-          incPWM = incPWM + (PWMMAX - PWMMIN);
-        } else if (incPWM > PWMMAX && estado == 1083) {
+          incPWM = incPWM + (((int)parameters[18]) - ((int)parameters[19]));
+        } else if (incPWM > ((int)parameters[18]) && estado == 1083) {
           estado = 0;
-        } else if (incPWM > PWMMAX && (estado >= 1080 && estado < 1083)) {
+        } else if (incPWM > ((int)parameters[18]) && (estado >= 1080 && estado < 1083)) {
           //Cambio de sentido de giro
           delay(2000);
           estado = estado + 1;
           mediaOmega = 0;
           numOmegas = 0;
-          incPWM = PWMMIN; //Valor inicial del PWM
+          incPWM = ((int)parameters[19]); //Valor inicial del PWM
           tiempoOmega = millis();
-          //Serial.println("ESTADO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-          //Serial.println(estado);
-          //Serial.println("TIEMPO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-          //Serial.println(tiempoOmega);
         }
 
         // Imprime la tabla PWM / velocidad angular en un CSV para fácil representación y mmanipulación de datos
-        Serial.println(";" + String(omega) + ";" + incPWM + ";" + "###"); //En radianes
-
-        //Filtro paso de baja (para quitar el ruido del giróscopo)
-        //y[i] := y[i-1] + α * (x[i] - y[i-1])
-        //omegaLP = omegaLP + 0.25 * (omega - omegaLP);
-        //Serial.println(":"+ String(omegaLP) + ";" + omegaStr + ";" + incPWM + "###");
+        Serial.println("oooccc" + String(omega) + "ww" + incPWM + "ww"  + "###");
 
       }
-
-
 
 
       //////////////////////////////////////////////////////////////////////////
@@ -565,37 +708,64 @@ void loop()
         }
         // Despues de 10 segundos girando y aumentando el PWM en 10, cambia de sentido
 
-        if ((tiempoOmega + 20000) < millis() && incPWM <= 250) {
-          pararMotores();
-          delay(500);
+        if ((tiempoOmega + 5000) < millis() && incPWM <= ((int)parameters[18])) {
+          //pararMotores();
+          //delay(500);
           tiempoOmega = millis();
           incPWM = incPWM + 10;
-        } else if (incPWM > 250 && estado == 1043) {
+        } else if (incPWM > ((int)parameters[18]) && estado == 1043) {
           estado = 0;
-        } else if (incPWM > 250 && (estado >= 1040 && estado < 1043)) {
+          pararMotores();
+        } else if (incPWM > ((int)parameters[18]) && (estado >= 1040 && estado < 1043)) {
           //Cambio de sentido de giro
-          delay(2000);
+          pararMotores();
+          delay(500);
           estado = estado + 1;
-          incPWM = 150; //Valor inicial del PWM
+          incPWM = ((int)parameters[19]); //Valor inicial del PWM
           tiempoOmega = millis();
-          //Serial.println("ESTADO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-          //Serial.println(estado);
-          //Serial.println("TIEMPO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-          //Serial.println(tiempoOmega);
+          tiempoEstado1040 = millis() ;
+          omegaLP = 0;
+          //Arranque de motores
+          if (estado == 1040) {
+            analogWrite(motorIAvance, 0);
+            analogWrite(motorIRetroceso, 0);
+            analogWrite(motorDAvance, 255);
+            analogWrite(motorDRetroceso, 0);
+          } else if (estado == 1041) {
+            analogWrite(motorIAvance, 255);
+            analogWrite(motorIRetroceso, 0);
+            analogWrite(motorDAvance, 0);
+            analogWrite(motorDRetroceso, 0);
+          } else if (estado == 1042) {
+            analogWrite(motorIAvance, 0);
+            analogWrite(motorIRetroceso, 0);
+            analogWrite(motorDAvance, 0);
+            analogWrite(motorDRetroceso, 255);
+          } else if (estado == 1043) {
+            analogWrite(motorIAvance, 0);
+            analogWrite(motorIRetroceso, 255);
+            analogWrite(motorDAvance, 0);
+            analogWrite(motorDRetroceso, 0);
+          }
+
+        }
+        //Filtro paso de baja (para quitar el ruido del giróscopo)
+        if (omegaLP == 0)
+          omegaLP = omega;
+        omegaLP = omegaLP + 0.1 * (omega - omegaLP);
+
+        // Imprime la tabla PWM / velocidad angular en un CSV para fácil representación y mmanipulación de datos.
+        // Solo valores válidos después tres segundo espues del inicio(elimina transitorios) y tres segundos antes del fin
+        if ((millis() > (tiempoOmega + 500)) && (millis() < tiempoOmega + 4500)   ) {
+          Serial.println("oooccc" + String(omegaLP) + "ww" + incPWM + "ww" + String(millis()) + "ww" + String(omega) + "ww###"); //En radianes
         }
 
-        // Imprime la tabla PWM / velocidad angular en un CSV para fácil representación y mmanipulación de datos
-        Serial.println(";" + String(omega) + ";" + incPWM + ";" + "###"); //En radianes
 
-        //Filtro paso de baja (para quitar el ruido del giróscopo)
-        //y[i] := y[i-1] + α * (x[i] - y[i-1])
-        //omegaLP = omegaLP + 0.25 * (omega - omegaLP);
-        //Serial.println(":"+ String(omegaLP) + ";" + omegaStr + ";" + incPWM + "###");
 
       }
 
       //////////////////////////////////////////////////////////////////////////
-      // Estado 1040 y siguientes 1041,1042,1043:
+      // FIN Estado 1040 y siguientes 1041,1042,1043:
       // Creando la tabla de velocidades angulares / PWM
       // 20 segundos girando y aumentando la velocidad, cambiando de sentido
       // permite obtener de forma gráfica la relacion entre valores del PWM
@@ -603,30 +773,64 @@ void loop()
       //////////////////////////////////////////////////////////////////////////
 
 
+      //////////////////////////////////////////////////////////////////////////
+      // Estado 1100 y siguientes 1101,1102,1103....:
+      // Trata de calcular la acelararcion angular máxima pasando de PWMe 180 a PWM de 250
+      // y viendo el tiempo
+      //////////////////////////////////////////////////////////////////////////
 
+      if (estado >= 1100 && estado <= 1101) {
+        if (estado == 1100) {
+          incPWM = 180;
+          analogWrite(motorIAvance, 0);
+          analogWrite(motorIRetroceso, 0);
+          analogWrite(motorDAvance, incPWM);
+          analogWrite(motorDRetroceso, 0);
+        } else if (estado == 1101) {
+          incPWM = 250;
+          analogWrite(motorIAvance, 0);
+          analogWrite(motorIRetroceso, 0);
+          analogWrite(motorDAvance, incPWM);
+          analogWrite(motorDRetroceso, 0);
+        }
+
+
+        if ((tiempoOmega + 20000) < millis()) {
+          estado = estado + 1;
+          tiempoOmega = millis();
+        }
+        //
+        if (estado >= 1102) {
+          pararMotores();
+          delay(500);
+          estado = 0;
+
+        }
+
+        //Filtro paso de baja (para quitar el ruido del giróscopo)
+        //y[i] := y[i-1] + α * (x[i] - y[i-1])
+        omegaLP = omegaLP + 0.25 * (omega - omegaLP);
+
+        // Imprime la tabla PWM / velocidad angular en un CSV para fácil representación y mmanipulación de datos.
+        Serial.println("oooccc" + String(omega) + "ww" + incPWM + "ww" + String(millis()) + "ww" + tiempoOmega + "ww" +  String(omegaLP) + "ww###"); //En radianes
+
+
+      }
+
+      //////////////////////////////////////////////////////////////////////////
       // Estado 1050, Pruebas PROPORCIONAL sobre VELOCIDAD ANGULAR DEL TYPE_gYROSCOPE
+      //////////////////////////////////////////////////////////////////////////
+
       if (estado == 1050) {
         if ((tiempoEstado1050 + 10000) > millis()) {
           //Control Proporocional
-          //auxerrorPWM = omega * 20; //102 es lo que sale en papel
-          //errorPWM = (int)auxerrorPWM;
-          /*
-                    Serial.println("Azimut");
-                    Serial.println(String(azimut));  //En radianes
-                    Serial.println("Omega");
-                    Serial.println(String(omega));  //En radianes
-                    Serial.println("errorPWM");
-                    Serial.println(errorPWM);  //En radianes
-                    Serial.println("###");
-          */
-          analogWrite(motorIAvance, 240);
+
+          analogWrite(motorIAvance, 225 + (int)( omega * Kp1050));
           analogWrite(motorIRetroceso, 0);
-          analogWrite(motorDAvance, 225 - (int)( omega * 20)) ;//analogWrite(motorDAvance, 240 - outPIDPWM) ; //CONTROL PROPOCIONAL SOBRE UNA DE LAS RUEDAS
+          analogWrite(motorDAvance, 225 - (int)( omega * Kp1050)) ; //CONTROL PROPOCIONAL SOBRE UNA DE LAS RUEDAS
           analogWrite(motorDRetroceso, 0);
 
-
         } else {
-          //Serial.println("Fin de linea!!!!!!!!!!!!!!!!###");
           estado = 0;
           pararMotores();
         }
@@ -636,15 +840,43 @@ void loop()
       // Estado 1060, Pruebas PID sobre el angulo con TYPE_GAME_ORIENTATION_VECTOR, se debe mover en línea recta durante 10 sg
 
       if (estado == 1060) {
-        if ((tiempoEstado1060 + 10000) > millis()) {
+        //Durante dos segundos
+        if ((tiempoEstado1060 + 2000) > millis()) {
+          //OJO ! Velocidad fija para 0.15 m/Sg
+          cmdVel = 0.15 * parameters[0];
+          //movimiento_linea_recta(225, 215); //Valores a la mitad del rango PWM posible de 180 a 255. Haciendo Wd=-Wd para que camine recto y usando las ecuaciones
+          movimiento_linea_recta((cmd_PWMIzq(cmd_omegaIzq(cmdVel, 0))), (cmd_PWMDer(cmd_omegaDer(cmdVel, 0))));
+          // lineales que relacionan el w con el PWM, sale que para que ande recto debe ser PWM_I=225 y PWM_D=215
 
-          movimiento_linea_recta(225, 215);
+          azimut_odometry_iiikkk += incAzimut;
 
+          //Serial.print("oooccc" + String(azimut) + "ww"  + String(millis() - tiempoEstado1060) + "ww"  + String(azimutRef) + "ww" + String(estadoPID) +  "ww" + String(salPID) + "ww" + String(errorAzimut) +  "ww" + String(errorAzimutI) + "ww" + String(errorAzimutD) + "ww"); //En radianes
+          Serial.print("oooccc");
+          Serial.print(azimut, 4);
+          Serial.print ("ww"  + String(millis() - tiempoEstado1060) + "ww");
+          Serial.print (azimutRef, 4);
+          Serial.print ("ww" + String(estadoPID) +  "ww" + String(salPID) + "ww" + String(errorAzimut) +  "ww" + String(errorAzimutI) + "ww" + String(errorAzimutD) + "ww"); //En radianes
+          Serial.print(incAzimut, 4);
+          Serial.print("ww");
+          Serial.print(azimut_odometry_iiikkk, 4);
+          Serial.print("ww");
+          Serial.print(distancia, 4);
+          Serial.print("ww");
+          Serial.print(distancia * cos(azimut_odometry_iiikkk / 10000L), 4);
+          Serial.print("ww");
+          Serial.print(distancia * sin(azimut_odometry_iiikkk / 10000L), 4);
+          Serial.print("ww");
+          Serial.print(x, 4);
+          Serial.print("ww");
+          Serial.print(y, 4);
+          Serial.print("ww###");
+          Serial.print('\n');
 
         } else {
-          //Serial.println("Fin de linea!!!!!!!!!!!!!!!!###");
+
           estado = 0;
           pararMotores();
+          cmdVel = 0.0;
         }
 
       }
@@ -658,56 +890,18 @@ void loop()
         if (valores[1] > distanciaEstado1070 - DISTANCIA_CALIBRACION) {
 
 
-          //movimiento_linea_recta(225,215);
-
           //Vel =0.15 y omega=0
           movimiento_linea_recta((cmd_PWMIzq(cmd_omegaIzq(velEstado1070, 0))), (cmd_PWMDer(cmd_omegaDer(velEstado1070, 0))));
-          /*
-                    Serial.println("(cmd_PWMIzq(cmd_omegaIzq(velEsado1070,0))");
-                    Serial.println(String((cmd_PWMIzq(cmd_omegaIzq(velEstado1070, 0)))));
-                    Serial.println("(cmd_PWMDer(cmd_omegaDer(velEstado1070,0))");
-                    Serial.println(String((cmd_PWMDer(cmd_omegaDer(velEstado1070, 0)))));
+          incTiempoEstado1070 = millis() - tiempoEstado1070;
+          float vel_inst1070 = (-(float)valores[1] + (float)distanciaEstado1070) / (float)incTiempoEstado1070;
+          Serial.println("oooccc" + String(valores[1])  + "ww" + String(incTiempoEstado1070)  + "ww" + String(vel_inst1070)  + "ww"  + String( velEstado1070 / (vel_inst1070 * parameters[0]) ) + "ww###");
 
-                    Serial.println("cmd_omegaIzq(velEstado1070,0)");
-                    Serial.println(String(cmd_omegaIzq(velEstado1070, 0)));
-                    Serial.println("cmd_omegaDer(velEstado1070,0)");
-                    Serial.println(String(cmd_omegaDer(velEstado1070, 0)));
-
-                    Serial.println("ditancia");
-                    Serial.println(distancia);
-                    Serial.println("distanciaEstado1070");
-                    Serial.println(distanciaEstado1070);
-                    Serial.println("valores[0]");
-                    Serial.println(valores[0]);
-                    Serial.println("valores[1]");
-                    Serial.println(valores[1]);
-                    Serial.println("valores[2]");
-                    Serial.println(valores[2]);
-          */
         } else {
           pararMotores();
           incTiempoEstado1070 = millis() - tiempoEstado1070;
-          /*
-                    Serial.println("tiempoActual");
-                    Serial.println(String(millis()));
-
-                    Serial.println("tiempoEstado1070");
-                    Serial.println(tiempoEstado1070);
-
-                    Serial.println("incTiempoEstado1070");
-                    Serial.println(incTiempoEstado1070);
-
-                    Serial.println("DISTANCIA_CALIBRACION");
-                    Serial.println(DISTANCIA_CALIBRACION);
-
-                    //Serial.println("velocidad");
-                    //Serial.println(DISTANCIA_CALIBRACION/incTiempoEstado1070);
-
-                    Serial.println("Fin de linea!!!!!!!!!!!!!!!!###");
-                    */
+          float vel_inst1070 = (-(float)valores[1] + (float)distanciaEstado1070) / (float)incTiempoEstado1070;
+          Serial.println("oooccc" + String(valores[1])  + "ww" + String(incTiempoEstado1070)  + "ww" + String(vel_inst1070)  + "ww"  + String( velEstado1070 / (vel_inst1070 * parameters[0]) ) + "ww###");
           estado = 0;
-
-
         }
 
       }
@@ -716,33 +910,13 @@ void loop()
 
       // Estado 1110, debe girar
       if (estado == 1110) {
-        if  (abs(azimutRef - azimut) > 0.02) {
+        if  (abs(azimutRef - azimut) > 0.04) {
 
-          movimiento_giro(); //AQUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!30 abril
-          //delay(175);
-          //pararMotores();
-          //delay(25);
-          /*
-          Serial.println("azimutRef");
-          Serial.println(String(azimutRef));
-
-          Serial.println("azimut");
-          Serial.println(String(azimut));
-
-          Serial.println("Sigue girando!!!!!!!!!!!!!!!!###");
-          */
+          movimiento_giro();
           estado = 1110;
 
         } else {
-          /*
-          Serial.println("azimutRef");
-          Serial.println(String(azimutRef));
 
-          Serial.println("azimut");
-          Serial.println(String(azimut));
-
-          Serial.println("Fin de giro!!!!!!!!!!!!!!!!###");
-          */
           contadorEstado1110 += 1;
           if (contadorEstado1110 > 5)
             estado = 0;
@@ -750,16 +924,71 @@ void loop()
 
         }
 
+
+        Serial.println("oooccc" + String(azimutRef) + "ww" + String(azimut) + "ww" + String(millis()) + "ww" + String(outPD) + "ww###"); //En radianes
+
       }
 
       // Fin de Estado 1070
 
+      // Estado 1140
+
+      if (estado == 1140) {
+        if (incAzimut != azimut) { //Realiza un arco de circunferencia, vel!=0 y omega!=0
+
+          movimiento_arco(cmd_PWMIzq(cmd_omegaIzq(parameters[0] * cmdVel, parameters[1] * cmdOmega)), cmd_PWMDer(cmd_omegaDer(parameters[0] * cmdVel, parameters[1] * cmdOmega)));
+
+          Serial.println("oooccc" + String(azimutEstado1140) + "ww" + String(azimut) + "ww" + String(millis() - tiempoEstado1140) + "ww" + String(ICCR) + "ww" + String(outPID_arco) + "ww###"); //En radianes
+        }
+
+        if ( ((float)  atan2((double)sin(azimutEstado1140 - azimut), (double)cos(azimutEstado1140 - azimut)) <= (0.00)) && (millis() > tiempoEstado1140 + 500)) {
+          pararMotores();
+          estado = 0;
+          estadoPID = -1;
+        }
+      }
+
+      // Fin Estado 1140
+
 
       // Estado 2010, anda recto tras recibir una orden
       if (estado == 2010) {
-        movimiento_linea_recta((cmd_PWMIzq(cmd_omegaIzq(Kvel * cmdVel, 0))), (cmd_PWMDer(cmd_omegaDer(Kvel * cmdVel, 0))));
+        azimut_odometry_iiikkk = azimut_odometry_iiikkk + incAzimut;
+        movimiento_linea_recta((cmd_PWMIzq(cmd_omegaIzq(parameters[0] * cmdVel, 0))), (cmd_PWMDer(cmd_omegaDer(parameters[0] * cmdVel, 0))));
+        //azimut_odometry += 0; //Supone que hace la línea recta y no se desvía ??? podria ser ErrorAzimut*Cos(incAzimut) PENSAR??
+        //azimut_odometry = azimut_odometry_iiikkk + errorAzimut; //Considera la desviación del ángulo usada en el PID
+
       }
-      //
+      // Fin Estado 2010
+
+      // Estado 2020, giro puro
+      if (estado == 2020) {
+        azimut_odometry += incAzimut;
+        //azimut_odometry =  atan2(sin(azimut_odometry), cos(azimut_odometry)); //Limita a -pi pi . HAcer Funcion !!!
+      }
+      // Fin Estado 2010
+
+
+      // Estado 2000, anda haciendo un arco
+      if (estado == 2000) {
+        if (incAzimut != azimut) { //Realiza un arco de circunferencia, vel!=0 y omega!=0
+
+          //Considerando que incAzimut es pequeña estimo la velocidad lineal
+          //vel_estimada = 1000 * (ICCR * incAzimut) / dtAzimut;
+
+          movimiento_arco(cmd_PWMIzq(cmd_omegaIzq(parameters[0] * cmdVel, parameters[1] * cmdOmega)), cmd_PWMDer(cmd_omegaDer(parameters[0] * cmdVel, parameters[1] * cmdOmega)));
+
+          // Calculo de x y para odometria
+          x +=  ICCR * (sin(azimut_odometry + incAzimut) - sin(azimut_odometry));
+          y += ICCR * (cos(azimut_odometry) - cos(azimut_odometry + incAzimut));
+
+          // Actualizacion de azimut para odometria
+          azimut_odometry += incAzimut;
+          //azimut_odometry =  atan2(sin(azimut_odometry), cos(azimut_odometry)); //Limita a -pi pi . HAcer Funcion !!!
+
+        }
+      }
+      // Fin Estado 2000
 
       if (estado == 0) {
         pararMotores();
@@ -775,108 +1004,57 @@ void loop()
 
       inputString = "";
       commandComplete = false;
+
+
     }
 
     //Comando de test iiitestXXww###m donde XX indica el número del test
     else if (inputString.startsWith("iiittt")) {
 
-      //Serial.println("Detectó iiitest!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-
-      //trozo1Str = inputString.substring(inputString.indexOf("ttt") + 3, inputString.indexOf("ww"));
-      //paramTestStr = inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("ww###"));
       trozo1Str = inputString.substring(inputString.indexOf("ttt") + 3, inputString.indexOf("ww"));
       trozo2Str = inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("ww###"));
 
-      //Serial.println(" ttt " + trozo1Str);
+      //Valores por defecto en test
+      //No considera el comando de velocidad anterior, en cualquier test
+      cmdVelAnterior = 0;
+      cmdVel = 0.15;
+      cmdOmega = 0.5;
 
-      //Test1: Es avanzar en línea recta medio metro y girar 180 grados.
+      //Test1: Para motores y vuelve al estado 0
       if (trozo1Str.toInt() == 1) {
-        /*
-        if (valores[1] > 200) {
-          //Si el sensor de distancia no tiene una pared a menos de dos metros, camina medio metro por tiempo, en función de su experiencia previa
-
-          estado = 1011; //Indico el estado de test 100 + 1
-          Serial.println(estado);
-          azimutTest = azimut; // Coge  el azimut del momento de recibir una orden como el que debe serguir en la línea recta
-
-
-          //Determina el tiempo que durara el test para que avance 50 cm, conforme la experiencia previa (incDistTiempoAcc)
-          tiempoFinTest = millis();
-          auxiliarlong =  (tiempoAccion * 50);
-          auxiliarlong =  auxiliarlong / incDistTiempoAcc;
-          tiempoFinTest = auxiliarlong + tiempoFinTest;
-
-
-          //Pongo los motores a moverse
-          analogWrite(motorIAvance, 250);
-          analogWrite(motorIRetroceso, 0);
-          analogWrite(motorDAvance, 250);
-          analogWrite(motorDRetroceso, 0);
-          //
-        } else {
-          estado = 1012; //Indico el estado de test 100 + 1 + 2 (uso medida de distancia)
-          Serial.println(estado);
-          azimutTest = azimut; // Coge  el azimut del momento de recibir una orden como el que debe serguir en la línea recta
-          Serial.println("Azimut Test");
-          Serial.println(azimutTest);
-          //Determina la distanciaInicial
-          distanciaTest = valores[1];
-          Serial.println("Distancia Test");
-          Serial.println(distanciaTest);
-          //Pongo los motores a moverse
-          analogWrite(motorIAvance, 250);
-          analogWrite(motorIRetroceso, 0);
-          analogWrite(motorDAvance, 250);
-          analogWrite(motorDRetroceso, 0);
-        }
-        */
-      } else if (trozo1Str.toInt() == 2) {
-        estado = 1020; // estado de test 1000 ejercicio segundo
-        Serial.println(estado);
-      } else if (trozo1Str.toInt() == 3) {
-        // estado de test que minimiza correlación Wifi
+        pararMotores();
+        estado = 0;
+        estadoPID = -1;
+      }
+      //Test2: Merodea sin chocar usando los ultrasonidos.
+      else if (trozo1Str.toInt() == 2) {
+        estado = 1020;
+      }
+      //Test3: Se orienta hacia la luz sin conocimiento previo
+      else if (trozo1Str.toInt() == 3) {
         estado = 1030;
-      } else if (trozo1Str.toInt() == 4) {
+      }
+      //Test4:
+      else if (trozo1Str.toInt() == 4) {
         //estado que crea tabla w / pwm
         estado = 1040;
-        incPWM = 150; //Valor inicial del PWM
+        incPWM = ((int)parameters[19]); //Valor inicial del PWM
         tiempoOmega = millis();
-        /*
-        Serial.println("ESTADO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        Serial.println(estado);
-        Serial.println("TIEMPO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        Serial.println(tiempoOmega);
-        */
+        tiempoEstado1040 = 140;
+        omegaLP = 0;
+        // Arranque de motores
+        analogWrite(motorIAvance, 0);
+        analogWrite(motorIRetroceso, 0);
+        analogWrite(motorDAvance, 255);
+        analogWrite(motorDRetroceso, 0);
 
       }
       else if (trozo1Str.toInt() == 5) {
-        //estado que realiza un control proporcional en la velocidad angular (Deberia ser PID)
+        //Realiza un control PD basado en la velocidad angular
         estado = 1050;
 
-        //Serial.println("ESTADO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        //Serial.println(estado);
-        //Supongo objetivo Omega=0 OJO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        // OJO al retraso, pues los datos de velocidad angular se generan en el Android y se envían al Arduino,luego hay retraso OJO!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        //Aqui habria que tener tablas o funciones de interpolacion. HAY QUE HACERLO AUTOMATICO, PUES VARÍA MUCHO CON BATERIAS Y SUELO!!!!!!!!!!!!!!!!!
-
-        // De experiencia recogida en hoja de excel.
-        // PWMderecho=101,49*w+103,41
-        // PWMizquierdo=-111,47*w+132,47
-
-        //Quiero ir a recto, con cada rueda a 1 rad/sg
-        //PWMderecho=204
-        //PWMizquierdo=243
-        // Control derivativo (aprrox. pues no existe una frecuencia de muestreo fija)
         tiempoEstado1050 = millis();
         azimutRef = 100;
-
-        incTErrPWM = 0;
-        tErrPWMAnt = 0;
-        //errorPWM = 0;
-        errorPWMAnterior = 0;
-        errorPWMSum = 0;
-        errorPWMDiff = 0;
         outPID = 0;
         outPIDPWM = 0;
 
@@ -886,251 +1064,184 @@ void loop()
         analogWrite(motorDRetroceso, 0);
 
       }    else if (trozo1Str.toInt() == 6) {
-        //estado que realiza un control PID en el ángulo
+        //estado que realiza un control PID en el ángulo, moviendose en línea recta
         estado = 1060;
-
-        //Serial.println("ESTADO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        //Serial.println(estado);
+        azimut_odometry_iiikkk = 0.0;
+        distancia = 0;
+        x = 0.0;
+        y = 0.0;
 
         tiempoEstado1060 = millis();
+        if (cmdVel != cmdVelAnterior) {
+          azimutRef = azimut;
+        }
 
         inicia_linea_recta();
+
 
       } else if (trozo1Str.toInt() == 7) {
         //estado que realiza un control PID en el ángulo, y se mueve hasta una determinada distancia
         estado = 1070;
-        velEstado1070 = Kvel * trozo2Str.toFloat();
+        velEstado1070 = parameters[0] * trozo2Str.toFloat();
 
         tiempoEstado1070 = millis();
         distanciaEstado1070 = valores[1];
+
+        if (cmdVel != cmdVelAnterior) {
+          azimutRef = azimut;
+        }
 
         inicia_linea_recta();
 
       }  else if (trozo1Str.toInt() == 8) {
         //estado que crea tabla w / pwm. Calibración automática
         estado = 1080;
-        incPWM = PWMMIN; //Valor inicial del PWM
+        incPWM = ((int)parameters[19]); //Valor inicial del PWM
         tiempoOmega = millis();
         numOmegas = 0;
         mediaOmega = 0;
-        /*
-        Serial.println("ESTADO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        Serial.println(estado);
-        Serial.println("TIEMPO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        Serial.println(tiempoOmega);
-        */
+
+      }
+      else if (trozo1Str.toInt() == 9) {
+        //Trata de regresar al origen empleando los puntos Wifi
+        estado = 1090;
+
+      }
+      else if (trozo1Str.toInt() == 10) {
+        //Test 10: Trata de calcular la aceleración angular máxima.
+        estado = 1100;
+        incPWM = 170; //Valor inicial del PWM
+        tiempoOmega = millis();
+        omegaLP = 0; //Valor inicial del filtro LP
       }
       else if (trozo1Str.toInt() == 11) {
-        //estado que crea tabla w / pwm. Calibración automática
+        //Giro
         estado = 1110;
         tiempoEstado1110 = millis();
-        contadorEstado1110 = 0; // Contador de sobreoscilación !!!!!! DEBERIA SER ESO
-        //Serial.println("ESTADO @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        //Serial.println(estado);
-        inicia_giro(0.33); //VAlor aleatorio de angulo!!! AQUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        contadorEstado1110 = 0; // Contador de sobreoscilación
+        inicia_giro((float)  atan2((double)sin(azimut - 3.1416), (double)cos(azimut - 3.1416)));
       }
+      else if (trozo1Str.toInt() == 12) {
+        //Para el root e inicia las variables de estado
+        estado = 0;
+        pararMotores();
+        distancia = 0;
+        x = 0;
+        y = 0;
+        azimut_odometry = 0;
+        estadoPID = -1;
+      }
+      else if (trozo1Str.toInt() == 14) {
+        estado = 1140;
+        tiempoEstado1140 = millis();
+        azimutEstado1140 = azimut;
+
+        cmdVel = 0.15;
+        cmdOmega = 0.5;
+
+        ICCR = 0.5 * (parameters[3] / parameters[4]) * DISTANCIA_RUEDAS * ( cmd_omegaDer(parameters[0] * cmdVel, parameters[1] * cmdOmega) + cmd_omegaIzq(parameters[0] * cmdVel, parameters[1] * cmdOmega) ) / ( cmd_omegaDer(parameters[0] * cmdVel, parameters[1] * cmdOmega) - cmd_omegaIzq(parameters[0] * cmdVel, parameters[1] * cmdOmega) );
+
+        inicia_arco();
+        Serial.println("ooocccazimutEstado1140wwazimutwwTiempowwICCRwwoutPID_arcoww###");
+        movimiento_arco(cmd_PWMIzq(cmd_omegaIzq(parameters[0] * cmdVel, parameters[1] * cmdOmega)), cmd_PWMDer(cmd_omegaDer(parameters[0] * cmdVel, parameters[1] * cmdOmega)));
+
+      }
+      //Test15: Se orienta hacia la luz sin chocar sin conocimiento previo, usando iot y Machine Learning
+      else if (trozo1Str.toInt() == 15) {
+        estado = 1150;
+        auxX = 0;
+
+      }
+      //Test16: Se orienta hacia la luz sin chocar sin conocimiento previo, usando arquitectura VSA
+      else if (trozo1Str.toInt() == 16) {
+        estado = 1160;
+
+      }
+
 
       inputString = "";
       commandComplete = false;
     }
+    //Recibe una orden para modificar los parámetros
+    else if (inputString.startsWith("iiippp")) {
+      trozo1Str = inputString.substring(inputString.indexOf("ppp") + 3, inputString.indexOf("ww"));
+      trozo2Str = inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("ww###"));
+
+      indice = trozo1Str.toInt();
+      //Admite hasta 21 parametros
+      if (indice >= 0 && indice < 21)
+        parameters[indice] = trozo2Str.toFloat();
+
+
+      inputString = "";
+      commandComplete = false;
+    }
+
     //Recibe una orden tipo twist (velocidad lineal / velocidad angular)
     else if (inputString.startsWith("iiikkk")) {
-      //Serial.println("Detecta iiiTWIST");
-      //cmdVelStr = inputString.substring(inputString.indexOf("kkk") + 3, inputString.indexOf("ww"));
-      //cmdOmegaStr = inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("ww###"));
+
+      //Guarda la velocidad anterior, para saber si tiene que aplicar una nueva referencia de azimut o no
+      cmdVelAnterior = cmdVel;
+
       trozo1Str = inputString.substring(inputString.indexOf("kkk") + 3, inputString.indexOf("ww"));
-      trozo2Str = inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("ww###"));
+      trozo2Str = inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("vv"));
+      trozo3Str = inputString.substring(inputString.indexOf("vv") + 2, inputString.indexOf("ww###"));
+
       cmdVel = trozo1Str.toFloat();
       cmdOmega = trozo2Str.toFloat();
+      cmdAzimut = trozo3Str.toFloat() / 10000.0;
+
+      azimut_odometry_iiikkk = 00.0; // azimut_odometry ;
+
       distancia = 0;
-      /*
-      Serial.println("cmdVel");
-      Serial.println(String(cmdVel));
-      Serial.println("cmdOmega");
-      Serial.println(String(cmdOmega));
-      Serial.println("###");
 
-            Serial.println("cmd_omegaIzq(Kvel*cmdVel, cmdOmega)");
-            Serial.println(String(cmd_omegaIzq(Kvel * cmdVel, cmdOmega)));
-            Serial.println("cmd_PWMIzq(cmd_omegaIzq(Kvel*cmdVel, cmdOmega)");
-            Serial.println(String(cmd_PWMIzq(cmd_omegaIzq(Kvel * cmdVel, cmdOmega))));
 
-            Serial.println("cmd_omegaDer(Kvel*cmdVel, cmdOmega)");
-            Serial.println(String(cmd_omegaDer(Kvel * cmdVel, cmdOmega)));
-            Serial.println("cmd_PWMDer(cmd_omegaDer(Kvel*cmdVel, cmdOmega)");
-            Serial.println(String(cmd_PWMDer(cmd_omegaDer(Kvel * cmdVel, cmdOmega))));
-      */
       if (cmdVel == 0 && cmdOmega == 0) {
         pararMotores();
         estado = 0;
+        cmdVelAnterior = 0;
       }
       else if (cmdVel != 0 && cmdOmega == 0) {
         //Anda en línea recta
         estado = 2010;
+        if (cmdVel != cmdVelAnterior) {
+          azimutRef = cmdAzimut;
+          pararMotores();
+          //Serial.println("AzimutRef:" +  String(azimutRef) + " " + trozo3Str);
+        }
         inicia_linea_recta();
-        movimiento_linea_recta((cmd_PWMIzq(cmd_omegaIzq(Kvel * cmdVel, 0.0))), (cmd_PWMDer(cmd_omegaDer(Kvel * cmdVel, 0.0))));
+
       }
       //Gira en el sitio
       else if (cmdVel == 0 && cmdOmega != 0) {
         estado = 2020;
-        /*
-        //AQUI!!!! Habría que controlarlo con el valor de omega del giroscopo
 
-        Serial.println("(cmd_omegaIzq(0, cmdOmega))");
-        Serial.println((cmd_omegaIzq(0, cmdOmega)));
-
-        Serial.println("(cmd_omegaDer(0, cmdOmega))");
-        Serial.println((cmd_omegaDer(0, cmdOmega)));
-
-        Serial.println("(cmd_omegaIzq(0, cmdOmega))");
-        Serial.println(cmd_PWMIzq(cmd_omegaIzq(0, cmdOmega)));
-
-        Serial.println("cmd_PWMDer(cmd_omegaDer(0, cmdOmega))");
-        Serial.println(cmd_PWMDer(cmd_omegaDer(0, cmdOmega)));
-
-        Serial.println("Debería estar girando###");
-        */
-        motoresPWM(cmd_PWMIzq(cmd_omegaIzq(0, Komega * cmdOmega)), cmd_PWMDer(cmd_omegaDer(0, Komega * cmdOmega)));
-
+        motoresPWM(cmd_PWMIzq(cmd_omegaIzq(0.0 , parameters[1] * cmdOmega)), cmd_PWMDer(cmd_omegaDer(0.0 , parameters[1] * cmdOmega)));
+        cmdVelAnterior = 0;
 
       }
 
       //Anda haciendo un arco de circunferencia
       else if (cmdVel != 0 && cmdOmega != 0) {
-        estado = 2000; //!!!!!!! PRUEBA SIN PID
+        estado = 2000;
 
         //Calcula el radio de curvatura ICC,para estima x,y
         // de www.doc.ic.ac.uk/~ajd/Robotics Lecture 2
         // R=W(vr+vl)/2(vr-vl)
-        //ICCR = 0.5 * DISTANCIA_RUEDAS * ( cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega) + cmd_omegaIzq(Kvel * cmdVel, Komega * cmdOmega) ) / ( cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega) - cmd_omegaIzq(Kvel * cmdVel, Komega * cmdOmega) );
-        ICCR =  DISTANCIA_RUEDAS * ( cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega) + cmd_omegaIzq(Kvel * cmdVel, Komega * cmdOmega) ) / ( cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega) - cmd_omegaIzq(Kvel * cmdVel, Komega * cmdOmega) );
-        //incOme = ( cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega) - cmd_omegaIzq(Kvel * cmdVel, Komega * cmdOmega) ) / DISTANCIA_RUEDAS;
-        /*
-        //Habría que controlarlo con el valor de omega del giroscopo y el tiempo/distancia recorrida
-        Serial.println("(cmd_ omegaIzq(Kvel * cmdVel, Komega * cmdOmega))");
-        Serial.println((cmd_omegaIzq(Kvel * cmdVel, Komega * cmdOmega)));
+        ICCR = 0.5 * (parameters[3] / parameters[4]) * DISTANCIA_RUEDAS * ( cmd_omegaDer(parameters[0] * cmdVel, parameters[1] * cmdOmega) + cmd_omegaIzq(parameters[0] * cmdVel, parameters[1] * cmdOmega) ) / ( cmd_omegaDer(parameters[0] * cmdVel, parameters[1] * cmdOmega) - cmd_omegaIzq(parameters[0] * cmdVel, parameters[1] * cmdOmega) );
+        //ICCR = 0*5* DISTANCIA_RUEDAS * ( cmd_omegaDer(parameters[0] * cmdVel, 3 * parameters[1] * cmdOmega) + cmd_omegaIzq(parameters[0] * cmdVel, 3* parameters[1] * cmdOmega) ) / ( cmd_omegaDer(parameters[0] * cmdVel, 3 * parameters[1] * cmdOmega) - cmd_omegaIzq(parameters[0] * cmdVel, 3 * parameters[1] * cmdOmega) );
 
-        Serial.println("(cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega))");
-        Serial.println((cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega)));
+        inicia_arco(); //030116
 
 
-        Serial.println("cmd_PWMIzq(cmd_omegaIzq(Kvel * cmdVel, Komega * cmdOmega)");
-        Serial.println(cmd_PWMIzq(cmd_omegaIzq(Kvel * cmdVel, Komega * cmdOmega)));
-
-        Serial.println("cmd_PWMDer(cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega)");
-        Serial.println(cmd_PWMDer(cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega)));
-
-        Serial.println("###");
-        Serial.println("Debería estar haciendo arco ###");
-        */
-
-        motoresPWM(cmd_PWMIzq(cmd_omegaIzq(Kvel * cmdVel, Komega * cmdOmega)), cmd_PWMDer(cmd_omegaDer(Kvel * cmdVel, Komega * cmdOmega)));
-
-        //delay(2000); //Depuracion
       }
 
       inputString = "";
       commandComplete = false;
     }
+
     // iiibbbXXXww### donde XXX es la correlación respecto al origen (destino buscado)
     else if (inputString.startsWith("iiibbb")) {
-
-      /* AQUI!!!!!!!!!!!!!!. Parte del LDR Offset por nivel superior
-      cmdBeaconStr = inputString.substring(inputString.indexOf("bbb") + 3, inputString.indexOf("ww"));
-      beacon = cmdBeaconStr.toInt();
-
-
-            if (beaconAnterior < 0){
-              diffBeacon = 0; // la primera vez, pues no hay beacon anterior. FALTA, ver que pasa si beacon es valor no VALIDO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-              incOffSet = 0; //random(0, 3) - 1;
-            }
-            else {
-              diffBeacon = beaconAnterior - beacon;
-               Serial.println("Beacon");
-       Serial.println(beacon);
-       Serial.println("Beacon Anterior");
-       Serial.println(beaconAnterior);
-
-       Serial.println("diffBeacon");
-       Serial.println(diffBeacon);
-
-
-
-
-              if (diffBeacon > 0 && (beacon < 500) && (beacon > 50)) {
-                filabeacon = 0;
-                //Matriz de "conocimiento" de Variación de Beacons Wifi (Input) y incremento/decremento LDROffset (Output)
-                if ((BCOffSet[0] > BCOffSet[1]) && (BCOffSet[0] > BCOffSet[2])) {
-                  incOffSet = -1;
-                } else if ((BCOffSet[1] > BCOffSet[0]) && (BCOffSet[1] > BCOffSet[2])) {
-                  incOffSet = 0;
-                } else if ((BCOffSet[2] > BCOffSet[1]) && (BCOffSet[2] > BCOffSet[0])) {
-                  incOffSet = 1;
-                }
-                else {
-                  incOffSet = random(0, 3) - 1;
-                }
-              }
-              if (diffBeacon < 0 && (beacon < 500) && (beacon > 50) ) {
-                       filabeacon = 6;
-                if ((BCOffSet[6] > BCOffSet[7]) && (BCOffSet[6] > BCOffSet[8])) {
-                  incOffSet = -1;
-                } else if ((BCOffSet[7] > BCOffSet[6]) && (BCOffSet[7] > BCOffSet[8])) {
-                  incOffSet = 0;
-                } else if ((BCOffSet[8] > BCOffSet[6]) && (BCOffSet[8] > BCOffSet[7])) {
-                  incOffSet = 1;
-                } else {
-                  incOffSet = random(0, 3) - 1;
-                }
-              }
-
-              if (beacon >= 500) {
-                //Si el valor de beacon es muy alto genera valor aleatorio
-
-                incOffSet = random(0, 3) - 1;
-
-              } else if ( beacon < 50) {
-
-                //Si el valor de beacon es muy alto genera valor aleatorio ya hemos llegado.
-
-                incOffSet = 0;
-
-              }
-
-
-
-
-            }
-            //Movimiento ????
-            Serial.println("LDROffSet Antes");
-            Serial.println(LDROffset);
-
-            LDROffset = LDROffset + (20*incOffSet) ;
-
-            Serial.println("LDROffSet Despues");
-            Serial.println(LDROffset);
-
-            Serial.println("incOffSet");
-            Serial.println(incOffSet);
-
-           //Jucio de valor: Si se redujo el valor del beacon se refuerza el movimiento anterior.
-            if (diffBeacon > 0 && (beacon < 500) && (beacon > 50)) {
-              auxX = (incOffSet + 1) + (filabeacon);
-              BCOffSet[auxX] += 5;
-            }
-
-       Serial.println("Matrices Beacon");
-            for (i = 0; i < 3; i++) {
-              for (j = 0; j < 3; j++) {
-                Serial.print(BCOffSet[i + 3 * j], DEC);
-                Serial.print(" ");
-              } Serial.println(" ");
-            }
-
-            beaconAnterior = beacon; // Actualiza el valor para la siguiente vez que reciba un beacon
-
-
-      */
 
       //LDROffSet=beacon; // PRUEBA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       inputString = "";
@@ -1146,9 +1257,9 @@ void loop()
     }
 
 
-
-
   }
+
+
   //
   // Fin de RX debería ser más limpio y sólo codificar el estado al recibir un mensaje.
   //
@@ -1170,123 +1281,79 @@ void loop()
       // Eliminado
       break;
     case 1020:
-      if (valores[2] < 250 && valores[2] < 250) {
-        if (abs(valores[0] - valores[2]) < 20) {
-          pararMotores();
-          estado = 0;
-        } else if (valores[0] > valores[2]) {
-          pararMotores();
-          analogWrite(motorIAvance, 0);
-          analogWrite(motorIRetroceso, 250);
-          analogWrite(motorDAvance, 250);
-          analogWrite(motorDRetroceso, 0);
-          //for (i = 0; i < errorAzimutGrados/36; i++)
-          delay(100);
-          pararMotores();
-        } else {
-          pararMotores();
-          analogWrite(motorIAvance, 250);
-          analogWrite(motorIRetroceso, 0);
-          analogWrite(motorDAvance, 0);
-          analogWrite(motorDRetroceso, 250);
-          //for (i = 0; i < errorAzimutGrados/36; i++)
-          delay(100);
-          pararMotores();
-        }
+
+      if (valores[0] < 200 && valores[0] > 0 && valores [2] >= 200) {
+        pararMotores();
+        analogWrite(motorIAvance, 0);
+        analogWrite(motorIRetroceso, 250);
+        analogWrite(motorDAvance, 250);
+        analogWrite(motorDRetroceso, 0);
       }
-      //delay(1000);
+      if (valores[2] < 200 && valores[2] > 0 && valores [0] >= 200) {
+        pararMotores();
+        analogWrite(motorIAvance, 250);
+        analogWrite(motorIRetroceso, 0);
+        analogWrite(motorDAvance, 0);
+        analogWrite(motorDRetroceso, 250);
+      }
+      if (valores[0] < 100 && valores[1] < 100 && valores[2] < 100 && (valores[1] > 0 || valores [1] > 0 || valores[2] > 0)) {
+        pararMotores();
+        analogWrite(motorIAvance, 0);
+        analogWrite(motorIRetroceso, 250);
+        analogWrite(motorDAvance, 0);
+        analogWrite(motorDRetroceso, 250);
+        delay(500);
+        pararMotores();
+        analogWrite(motorIAvance, 0);
+        analogWrite(motorIRetroceso, 250);
+        analogWrite(motorDAvance, 250);
+        analogWrite(motorDRetroceso, 0);
+        delay(600);
+        pararMotores();
+      }
+      if ((valores[0] >= 200 || valores[0] == 0) && (valores [1] >= 100 || valores[1] == 0) && (valores[2] >= 200 || valores[2] == 0)) {
+        pararMotores();
+        analogWrite(motorIAvance, 250);
+        analogWrite(motorIRetroceso, 0);
+        analogWrite(motorDAvance, 250);
+        analogWrite(motorDRetroceso, 0);
+      }
+
+
 
       break;
 
-    // 1030 - ejecuta el algoritmo de 2010 !!!
-    case 1030:
+    case 1150:
       /*
         //Lee los valores de las LDR y calcula sus diferencias
+        LDROffset = 0;
         LDRIzq = analogRead(analogInputIzq);
         LDRDer = analogRead(analogInputDer);
         LDRCen = analogRead(analogInputCen);
         LDRdiff = LDRIzq - LDRDer + LDROffset;
         LDRmedia = (LDRIzq + LDRDer) / 2;
 
-        // Envía señales para depuración
-        Serial.println("LDRIzq");
-        Serial.print(LDRIzq, DEC);
-        Serial.println(" ");
-        Serial.println("LDRDer");
-        Serial.print(LDRDer, DEC);
-        Serial.println(" ");
-        //Programa del 2010
-        if (LDRdiff > 0 && (abs(LDRdiff) > 30)) {
-          // Diferencia Positiva, mas luz en LDR derecha
-          fila = 0;
-          LDRsigno = 1;
-          //MOTOR DERECHO
-          if ((BCMD[0] > BCMD[1]) && (BCMD[0] > BCMD[2])) {
-            moveMD = -1;
-          } else if ((BCMD[1] > BCMD[0]) && (BCMD[1] > BCMD[2])) {
-            moveMD = 0;
-          } else if ((BCMD[2] > BCMD[1]) && (BCMD[2] > BCMD[0])) {
-            moveMD = 1;
-          }
-          else {
-            moveMD = random(0, 3) - 1;
-          }
-          //MOTOR IZQUIERDO
-          if ((BCMI[0] > BCMI[1]) && (BCMI[0] > BCMI[1])) {
-            moveMI = -1;
-          } else if ((BCMI[1] > BCMI[0]) && (BCMI[1] > BCMI[2])) {
-            moveMI = 0;
-          } else if ((BCMI[2] > BCMI[1]) && (BCMI[2] > BCMI[0])) {
-            moveMI = 1;
-          } else {
-            moveMI = random(0, 3) - 1;
-          }
-        }
+        USOffset = 0;
+        USDer = leeUS(echoPin1, trigPin1);
+        if (USDer == 0)
+          USDer = 3000;
+        USCen = leeUS(echoPin2, trigPin2);
+        if (USCen == 0)
+          USCen = 3000;
+        USIzq = leeUS(echoPin3, trigPin3);
+        if (USIzq == 0)
+          USIzq = 3000;
 
-        if (LDRdiff < 0 && (abs(LDRdiff) > 30)) {
-          //Más luz en la LDR Izquierda
-          fila = 6;
-          LDRsigno = -1;
-          //MOTOR DERECHO
-          if ((BCMD[6] > BCMD[7]) && (BCMD[6] > BCMD[8])) {
-            moveMD = -1;
-          } else if ((BCMD[7] > BCMD[6]) && (BCMD[7] > BCMD[8])) {
-            moveMD = 0;
-          } else if ((BCMD[8] > BCMD[6]) && (BCMD[8] > BCMD[7])) {
-            moveMD = 1;
-          } else {
-            moveMD = random(0, 3) - 1;
-          }
-          //MOTOR IZQUIERDO
-          if ((BCMI[6] > BCMI[7]) && (BCMI[6] > BCMI[7])) {
-            moveMI = -1;
-          } else if ((BCMI[7] > BCMI[6]) && (BCMI[7] > BCMI[8])) {
-            moveMI = 0;
-          } else if ((BCMI[8] > BCMI[7]) && (BCMI[8] > BCMI[6])) {
-            moveMI = 1;
-          } else {
-            moveMI = random(0, 3) - 1;
-          }
-        }
+        USdiff = USIzq - USDer + USOffset;
+        USmedia = (USDer + USCen + USIzq) / 3;
 
-        if (abs(LDRdiff) <= 30 and abs(LDRmedia) > 500) {
 
-          LDRsigno = 0;
-          fila = 3;
 
-          moveMI = random(0, 3) - 1;
+        //Genera Movimientos aleatorios de los motores
+        moveMI = random(0, 3) - 1;
+        moveMD = random(0, 3) - 1;
 
-          moveMD = random(0, 3) - 1;
-
-        } else if ( abs(LDRdiff) <= 30 and abs(LDRmedia) <= 500) {
-
-          //Si está "orientado" a la luz avanza
-          LDRsigno = 0;
-          fila = 3;
-          moveMI = 2; //0
-          moveMD = 2; //0
-        }
-
+        //Se mueve
         if (moveMI < 2) {
           if (moveMI == 0) {
             analogWrite(motorIAvance, 0);
@@ -1320,105 +1387,294 @@ void loop()
           analogWrite(motorDRetroceso, 0);
           analogWrite(motorIRetroceso, 0);
 
-          delay(600);
+
+          delay(900); //Cambiar por comparacion con timer para que no pare la recepcion de órdenes!!!!
         }
-
-
 
         //Se detiene
         analogWrite(motorIAvance, 0);
         analogWrite(motorIRetroceso, 0);
         analogWrite(motorDAvance, 0);
         analogWrite(motorDRetroceso, 0);
-
-        //ELIMINAR. Sólo para verificar
-        delay(2000);
+        auxX = 0;
+        delay(200); //Cambiar por comparacion con timer para que no pare la recepcion de órdenes!!!!
 
         // Verifica resultado de movimiento realizado.
-        LDRIzq = analogRead(analogInputIzq);
-        LDRDer = analogRead(analogInputDer);
-        LDRdiffpost = LDRIzq - LDRDer + LDROffset;
-        LDRmediapost = (LDRIzq + LDRDer) / 2;
+        LDRIzqpost = analogRead(analogInputIzq);
+        LDRDerpost = analogRead(analogInputDer);
+        LDRdiffpost = LDRIzqpost - LDRDerpost + LDROffset;
+        LDRmediapost = (LDRIzqpost + LDRDerpost) / 2;
 
-        Serial.println("LDRIzqpost");
-        Serial.print(LDRIzq, DEC);
-        Serial.println(" ");
-        Serial.println("LDRDerpost");
-        Serial.print(LDRDer, DEC);
-        Serial.println(" ");
+        USDerpost = leeUS(echoPin1, trigPin1);
+        if (USDerpost == 0 || USDer == 3000) //Si alguna de las dos medidas no son válidas, hace los dos valores 3000, para que no afecte al calculo de la media de distancia
+          USDerpost = 3000;
+        USCenpost = leeUS(echoPin2, trigPin2);
+        if (USCenpost == 0 || USCen == 3000)
+          USCenpost = 3000;
+        USIzqpost = leeUS(echoPin3, trigPin3);
+        if (USIzqpost == 0 || USIzq == 3000)
+          USIzqpost = 3000;
+        USdiffpost = USIzqpost - USDerpost + USOffset;
+        USmediapost = (USDerpost + USCenpost + USIzqpost) / 3;
 
-        Serial.println("LDRdiffpost");
-        Serial.print(LDRdiffpost, DEC);
-        Serial.println(" ");
-        Serial.println("LDRdiff");
-        Serial.print(LDRdiff, DEC);
-        Serial.println(" ");
-
-        Serial.println("LDRmediapost");
-        Serial.print(LDRmediapost, DEC);
-        Serial.println(" ");
-        Serial.println("LDRmedia");
-        Serial.print(LDRmedia, DEC);
-        Serial.println(" ");
-
-
-        // Si se redujo el valor de la diferencia se considera que el movimiento mejora y se puntua con +5 en la matriz de base de conocimiento
-        if ((abs(LDRdiffpost) - abs(LDRdiff)) < 0 && abs(LDRdiffpost - LDRdiff) > 20 && (LDRmediapost < LDRmedia) && fila != 3 && (moveMD != 2 && moveMI != 2)) {
-          auxX = (moveMD + 1) + (fila);
-          BCMD[auxX] += 5;
-          auxY = (moveMI + 1) + (fila);
-          BCMI[auxY] += 5;
-
-          Serial.println("Fila");
-          Serial.print(fila, DEC);
-          Serial.println(" ");
-          Serial.println("auxX");
-          Serial.print(auxX, DEC);
-          Serial.println(" ");
-          Serial.println("moveMD");
-          Serial.print(moveMD, DEC);
-          Serial.println(" ");
-          Serial.println("auxY");
-          Serial.print(auxY, DEC);
-          Serial.println(" ");
-          Serial.println("moveMI");
-          Serial.print(moveMI, DEC);
-          Serial.println(" ");
-        }
-
-        Serial.println("Diferencia actual");
-        Serial.print(LDRdiffpost, DEC);
-        Serial.println(" ");
-        Serial.println("Diferencia anterior");
-        Serial.print(LDRdiff, DEC);
-        Serial.println(" ");
-        Serial.println("Mov motor derecho");
-        Serial.print(moveMD, DEC);
-        Serial.println(" ");
-        Serial.println("Mov motor izquierdo");
-        Serial.print(moveMI, DEC);
-        Serial.println(" ");
-
-        Serial.println(" ");
-        Serial.println("Matrices motor derecho");
-        for (j = 0; j < 3; j++) {
-          for (i = 0; i < 3; i++) {
-
-            Serial.print(BCMD[i + (3 * j)], DEC);
-            Serial.print(" ");
-          } Serial.println(" ");
-        }
-        Serial.println("Matrices motor izquierdo");
-        for (j = 0; j < 3; j++) {
-          for (i = 0; i < 3; i++) {
-
-            Serial.print(BCMI[i + (3 * j)], DEC);
-            Serial.print(" ");
-          } Serial.println(" ");
+        //Juicio de valor (policy) 1. Mejoro luz. 2 Mejoró US. 3 Mejoró Luz + US
+        //if ((abs(LDRdiffpost) - abs(LDRdiff)) < 0 && abs(LDRdiffpost - LDRdiff) > 2 && (LDRmediapost < LDRmedia) ) {
+        if ((abs(LDRdiffpost) - abs(LDRdiff)) < 0  && (LDRmediapost < LDRmedia)  && abs(LDRdiffpost - LDRdiff) > 10 ) {
+          auxX = 1;
+        } else {
+          auxX = 0;
 
         }
-        //Fin del programa de 2010
+
+        if ((abs(USdiffpost) - abs(USdiff)) > 0  && (USmediapost > USmedia) && abs(USdiffpost - USdiff) > 3 && abs(USCenpost - USCen) > 3) {
+          //if ( (USmediapost > USmedia) && abs(USdiffpost - USdiff) > 10) {
+          //auxX += 5;
+          //auxY += 5;
+          auxX += 2;
+        } else {
+          //auxX = 0;
+
+        }
+        // if (auxX>0) {
+        Serial.print("oooccc" + String(LDRIzq) + "ww" + String(LDRCen) + "ww" + String(LDRDer) + "ww" +   String(LDRIzqpost) + "ww" + String(LDRCenpost) + "ww" + String(LDRDerpost) + "ww");
+        Serial.print(String(USIzq) + "ww" + String(USCen) + "ww" + String(USDer) + "ww" +   String(USIzqpost) + "ww" + String(USCenpost) + "ww" + String(USDerpost) + "ww");
+        Serial.print (String(auxX) + "ww" + String(moveMI) + "ww" +  String(moveMD) + "ww" + "###");
+        Serial.println("");
+        // }
+
       */
+      //Fin de estado 1150, entrenamiento para machine learning
+      break;
+
+    case 1160:
+      //VSA
+      break;
+    case 1030:
+      //Programa del 2010
+      /*
+      //Lee los valores de las LDR y calcula sus diferencias
+      LDRIzq = analogRead(analogInputIzq);
+      LDRDer = analogRead(analogInputDer);
+      LDRCen = analogRead(analogInputCen);
+      LDRdiff = LDRIzq - LDRDer + LDROffset;
+      LDRmedia = (LDRIzq + LDRDer) / 2;
+
+      // Envía señales para depuración
+
+      Serial.println("LDRIzq");
+      Serial.print(LDRIzq, DEC);
+      Serial.println(" ");
+      Serial.println("LDRDer");
+      Serial.print(LDRDer, DEC);
+      Serial.println(" ");
+
+
+            if (LDRdiff > 0 && (abs(LDRdiff) > 30)) {
+              // Diferencia Positiva, mas luz en LDR derecha
+              fila = 0;
+              LDRsigno = 1;
+              //MOTOR DERECHO
+              if ((BCMD[0] > BCMD[1]) && (BCMD[0] > BCMD[2])) {
+                moveMD = -1;
+              } else if ((BCMD[1] > BCMD[0]) && (BCMD[1] > BCMD[2])) {
+                moveMD = 0;
+              } else if ((BCMD[2] > BCMD[1]) && (BCMD[2] > BCMD[0])) {
+                moveMD = 1;
+              }
+              else {
+                moveMD = random(0, 3) - 1;
+              }
+              //MOTOR IZQUIERDO
+              if ((BCMI[0] > BCMI[1]) && (BCMI[0] > BCMI[1])) {
+                moveMI = -1;
+              } else if ((BCMI[1] > BCMI[0]) && (BCMI[1] > BCMI[2])) {
+                moveMI = 0;
+              } else if ((BCMI[2] > BCMI[1]) && (BCMI[2] > BCMI[0])) {
+                moveMI = 1;
+              } else {
+                moveMI = random(0, 3) - 1;
+              }
+            }
+
+            if (LDRdiff < 0 && (abs(LDRdiff) > 30)) {
+              //Más luz en la LDR Izquierda
+              fila = 6;
+              LDRsigno = -1;
+              //MOTOR DERECHO
+              if ((BCMD[6] > BCMD[7]) && (BCMD[6] > BCMD[8])) {
+                moveMD = -1;
+              } else if ((BCMD[7] > BCMD[6]) && (BCMD[7] > BCMD[8])) {
+                moveMD = 0;
+              } else if ((BCMD[8] > BCMD[6]) && (BCMD[8] > BCMD[7])) {
+                moveMD = 1;
+              } else {
+                moveMD = random(0, 3) - 1;
+              }
+              //MOTOR IZQUIERDO
+              if ((BCMI[6] > BCMI[7]) && (BCMI[6] > BCMI[7])) {
+                moveMI = -1;
+              } else if ((BCMI[7] > BCMI[6]) && (BCMI[7] > BCMI[8])) {
+                moveMI = 0;
+              } else if ((BCMI[8] > BCMI[7]) && (BCMI[8] > BCMI[6])) {
+                moveMI = 1;
+              } else {
+                moveMI = random(0, 3) - 1;
+              }
+            }
+
+            if (abs(LDRdiff) <= 30 and abs(LDRmedia) > 500) {
+
+              LDRsigno = 0;
+              fila = 3;
+
+              moveMI = random(0, 3) - 1;
+
+              moveMD = random(0, 3) - 1;
+
+            } else if (
+      ) {
+
+              //Si está "orientado" a la luz para
+              LDRsigno = 0;
+              fila = 3;
+              moveMI = 0;
+              moveMD = 0;
+            }
+
+            if (moveMI < 2) {
+              if (moveMI == 0) {
+                analogWrite(motorIAvance, 0);
+                analogWrite(motorIRetroceso, 0);
+              }
+              if (moveMD == 0) {
+                analogWrite(motorDAvance, 0);
+                analogWrite(motorDRetroceso, 0);
+              }
+              if (moveMI == -1) {
+                analogWrite(motorIAvance, 0);
+                analogWrite(motorIRetroceso, 250);
+              }
+              if (moveMD == -1) {
+                analogWrite(motorDAvance, 0);
+                analogWrite(motorDRetroceso, 250);
+              }
+              if (moveMI == 1) {
+                analogWrite(motorIAvance, 250);
+                analogWrite(motorIRetroceso, 0);
+              }
+              if (moveMD == 1) {
+                analogWrite(motorDAvance, 250);
+                analogWrite(motorDRetroceso, 0);
+              }
+              //Se mueve durante el tiempo indicado
+              delay(200);
+            } else if (moveMI == 2 && moveMD == 2) {
+              analogWrite(motorDAvance, 250);
+              analogWrite(motorIAvance, 250);
+              analogWrite(motorDRetroceso, 0);
+              analogWrite(motorIRetroceso, 0);
+
+              delay(600);
+            }
+
+
+
+            //Se detiene
+            analogWrite(motorIAvance, 0);
+            analogWrite(motorIRetroceso, 0);
+            analogWrite(motorDAvance, 0);
+            analogWrite(motorDRetroceso, 0);
+
+            // Verifica resultado de movimiento realizado.
+            LDRIzq = analogRead(analogInputIzq);
+            LDRDer = analogRead(analogInputDer);
+            LDRdiffpost = LDRIzq - LDRDer + LDROffset;
+            LDRmediapost = (LDRIzq + LDRDer) / 2;
+
+
+            Serial.println("LDRIzqpost");
+            Serial.print(LDRIzq, DEC);
+            Serial.println(" ");
+            Serial.println("LDRDerpost");
+            Serial.print(LDRDer, DEC);
+            Serial.println(" ");
+
+            Serial.println("LDRdiffpost");
+            Serial.print(LDRdiffpost, DEC);
+            Serial.println(" ");
+            Serial.println("LDRdiff");
+            Serial.print(LDRdiff, DEC);
+            Serial.println(" ");
+
+            Serial.println("LDRmediapost");
+            Serial.print(LDRmediapost, DEC);
+            Serial.println(" ");
+            Serial.println("LDRmedia");
+            Serial.print(LDRmedia, DEC);
+            Serial.println(" ");
+
+
+            // Si se redujo el valor de la diferencia se considera que el movimiento mejora y se puntua con +5 en la matriz de base de conocimiento
+            if ((abs(LDRdiffpost) - abs(LDRdiff)) < 0 && abs(LDRdiffpost - LDRdiff) > 20 && (LDRmediapost < LDRmedia) && fila != 3 && (moveMD != 2 && moveMI != 2)) {
+              auxX = (moveMD + 1) + (fila);
+              BCMD[auxX] += 5;
+              auxY = (moveMI + 1) + (fila);
+              BCMI[auxY] += 5;
+
+
+              Serial.println("Fila");
+              Serial.print(fila, DEC);
+              Serial.println(" ");
+              Serial.println("auxX");
+              Serial.print(auxX, DEC);
+              Serial.println(" ");
+              Serial.println("moveMD");
+              Serial.print(moveMD, DEC);
+              Serial.println(" ");
+              Serial.println("auxY");
+              Serial.print(auxY, DEC);
+              Serial.println(" ");
+              Serial.println("moveMI");
+              Serial.print(moveMI, DEC);
+              Serial.println(" ");
+
+            }
+
+
+            Serial.println("Diferencia actual");
+            Serial.print(LDRdiffpost, DEC);
+            Serial.println(" ");
+            Serial.println("Diferencia anterior");
+            Serial.print(LDRdiff, DEC);
+            Serial.println(" ");
+            Serial.println("Mov motor derecho");
+            Serial.print(moveMD, DEC);
+            Serial.println(" ");
+            Serial.println("Mov motor izquierdo");
+            Serial.print(moveMI, DEC);
+            Serial.println(" ");
+
+            Serial.println(" ");
+            Serial.println("Matrices motor derecho");
+            for (j = 0; j < 3; j++) {
+              for (i = 0; i < 3; i++) {
+
+                Serial.print(BCMD[i + (3 * j)], DEC);
+                Serial.print(" ");
+              } Serial.println(" ");
+            }
+            Serial.println("Matrices motor izquierdo");
+            for (j = 0; j < 3; j++) {
+              for (i = 0; i < 3; i++) {
+
+                Serial.print(BCMI[i + (3 * j)], DEC);
+                Serial.print(" ");
+              } Serial.println(" ");
+
+            }
+      */
+      //Fin del programa de 2010
+
       break;
 
     case 1040:
@@ -1439,58 +1695,14 @@ void loop()
 
       if (valores[1] > distanciaEstado1070 - DISTANCIA_CALIBRACION) {
 
-        /*
-
-                Serial.println("ditancia");
-                Serial.println(distancia);
-                Serial.println("distanciaEstado1070");
-                Serial.println(distanciaEstado1070);
-                Serial.println("valores[0]");
-                Serial.println(valores[0]);
-                Serial.println("valores[1]");
-                Serial.println(valores[1]);
-                Serial.println("valores[2]");
-                Serial.println(valores[2]);
-        */
       }
 
       else {
         pararMotores();
         incTiempoEstado1070 = millis() - tiempoEstado1070;
-        /*
-              Serial.println("tiempoActual");
-              Serial.println(String(millis()));
+        float vel_inst1070 = (-(float)valores[1] + (float)distanciaEstado1070) / (float)incTiempoEstado1070;
+        Serial.println("oooccc" + String(valores[1])  + "ww" + String(incTiempoEstado1070)  + "ww" + String(vel_inst1070)  + "ww"  + String( velEstado1070 / (vel_inst1070 * parameters[0])) + "ww###");
 
-              Serial.println("tiempoEstado1070");
-              Serial.println(tiempoEstado1070);
-
-              Serial.println("incTiempoEstado1070");
-              Serial.println(incTiempoEstado1070);
-
-              Serial.println("DISTANCIA_CALIBRACION");
-              Serial.println(DISTANCIA_CALIBRACION);
-
-
-              Serial.println("ditancia");
-              Serial.println(distancia);
-              Serial.println("distanciaEstado1070");
-              Serial.println(distanciaEstado1070);
-              Serial.println("valores[0]");
-              Serial.println(valores[0]);
-              Serial.println("valores[1]");
-              Serial.println(valores[1]);
-              Serial.println("valores[2]");
-              Serial.println(valores[2]);
-
-              Serial.println("velocidad");
-              Serial.println(String(DISTANCIA_CALIBRACION / incTiempoEstado1070));
-
-
-
-
-
-              Serial.println("Fin de linea!!!!!!!!!!!!!!!!###");
-              */
 
         estado = 0;
 
@@ -1502,8 +1714,20 @@ void loop()
       // Calculando automaticamente los valores de la linea PWM velocidad angular
       break;
 
+    case 1090:
+      // Se mueve hasta el origen usando los puntos de acceso proximos.
+      break;
+
+    case 1100:
+      // Pasa de PWM 180 a 250, tratando de calcular la velocidad angular máxima. (Para posteriormente filtrar)
+      break;
+
     case 1110:
       // Se orienta a un angulo
+      break;
+
+    case 1140:
+      //Describe media circunferencia
       break;
 
     default:
@@ -1514,9 +1738,8 @@ void loop()
 
 
 
+
 }
-
-
 
 void pararMotores() {
   // Para motores
@@ -1532,27 +1755,45 @@ int motoresPWM(int motor_izquierdo, int motor_derecho) {
 
   // saturacion, envía la suma de
   // = 0 si no está saturado
-  // = 1, si motor derecho esta por debajo de PWMMIN
-  // = 2, si motor derecho está por enciam de PWMMAX
-  // = 10, si motor izquierdo esta por debajo de PWMMIN
-  // = 20, si motor izquierdo está por enciam de PWMMAX
+  // = 1, si motor derecho esta por debajo de ((int)parameters[19])
+  // = 2, si motor derecho está por enciam de ((int)parameters[18])
+  // = 10, si motor izquierdo esta por debajo de ((int)parameters[19])
+  // = 20, si motor izquierdo está por enciam de ((int)parameters[18])
 
-  if (abs(motor_derecho) > PWMMAX) {
-    motor_derecho = PWMMAX * (motor_derecho / abs(motor_derecho));
+  if (abs(motor_derecho) > ((int)parameters[18])) {
+    motor_derecho = ((int)parameters[18]) * (motor_derecho / abs(motor_derecho));
     saturacion += 2;
-  } else if (abs(motor_derecho) < PWMMIN) {
-    motor_derecho = 0 ;
+  } else if (abs(motor_derecho) < ((int)parameters[19])) {
+    //motor_derecho = 0 ;
     saturacion += 1;
   }
 
-  if (abs(motor_izquierdo) > PWMMAX) {
-    motor_izquierdo = PWMMAX * (motor_izquierdo / abs(motor_izquierdo));
+  if (abs(motor_izquierdo) > ((int)parameters[18])) {
+    motor_izquierdo = ((int)parameters[18]) * (motor_izquierdo / abs(motor_izquierdo));
     saturacion += 20;
-  } else if (abs(motor_izquierdo) < PWMMIN) {
-    motor_izquierdo = 0 ;
+  } else if (abs(motor_izquierdo) < ((int)parameters[19])) {
+    //motor_izquierdo = 0 ;
     saturacion += 10;
   }
 
+  // Arranque
+  /*
+  if (motor_derecho > 0) {
+    analogWrite(motorDAvance, 250);
+    analogWrite(motorDRetroceso, 0);
+  } else {
+    analogWrite(motorDAvance, 0);
+    analogWrite(motorDRetroceso, 250);
+  }
+
+  if (motor_izquierdo > 0) {
+    analogWrite(motorIAvance, 250);
+    analogWrite(motorIRetroceso, 0);
+  } else {
+    analogWrite(motorIAvance, 0);
+    analogWrite(motorIRetroceso, 250);
+  }
+  */
 
   // Sentido de giro
   if (motor_derecho > 0) {
@@ -1569,6 +1810,17 @@ int motoresPWM(int motor_izquierdo, int motor_derecho) {
   } else {
     analogWrite(motorIAvance, 0);
     analogWrite(motorIRetroceso, abs(motor_izquierdo));
+  }
+
+  if (saturacion != 0 && estadoPID == 0) //Si el PID esta fuuncionando (estadoPID=0) y existe saturacion (saturacion !=0), entonces pasa el estadoPID a 1 (indicando que está saturado)
+  {
+    estadoPID = 1;
+  }
+  else {
+    if (saturacion == 0 && estadoPID == 1) // Y Si deja de estar saturado deja de estar saturado
+    {
+      estadoPID = 0;
+    }
   }
 
   return saturacion;
@@ -1588,47 +1840,38 @@ float interpola(float x, float x_min, float y_min, float x_max, float y_max)
 
 //Cinemática inversa uniciclo (PENDIENTE VALIDAR !!!!!!!!!!!!!!!!!!!!!. ESPECIALMENTE EL SIGNO DE cmd_ang!!!)
 float cmd_omegaDer(float cmd_vel, float cmd_ang) {
-  // FALTA DEFINIR LOS LÍMITES DE VELOCIDADES MÁXIMOS y MINIMOS !!!!!!!!!!!!!!!!!!
-  //return (cmd_vel + (DISTANCIA_RUEDAS*cmd_ang/2))/RADIO_RUEDA;
-  //return (cmd_vel/7 + (DISTANCIA_RUEDAS * cmd_ang / 2)) / ( RADIO_RUEDA); //Para línea recta OK, con Kvel=1
-  //return (cmd_vel  + (DISTANCIA_RUEDAS * cmd_ang / 2)) / (80 * RADIO_RUEDA);
-  return (cmd_vel  + (DISTANCIA_RUEDAS * cmd_ang / 2)) / (8.34 * RADIO_RUEDA);
+
+  return (cmd_vel  + (parameters[3] * DISTANCIA_RUEDAS * cmd_ang / 2)) / (parameters[2] * RADIO_RUEDA);
+
 }
 float cmd_omegaIzq(float cmd_vel, float cmd_ang) {
-  //return (cmd_vel - (DISTANCIA_RUEDAS*cmd_ang/2))/RADIO_RUEDA;
-  //return (cmd_vel/7  - (DISTANCIA_RUEDAS * cmd_ang / 2)) / ( RADIO_RUEDA); //Para línea recta OK, co KVel=1. No considera omega
-  //return (cmd_vel - (DISTANCIA_RUEDAS * cmd_ang / 2)) / (80 * RADIO_RUEDA);
-  return (cmd_vel - (DISTANCIA_RUEDAS * cmd_ang / 2)) / (8.34 * RADIO_RUEDA);
+
+  return (cmd_vel - (parameters[3] * DISTANCIA_RUEDAS * cmd_ang / 2)) / (parameters[2] * RADIO_RUEDA);
+
 }
 
 
 //Relación omea / PWM (PEnDIENTE DE CAMBIAR VALORES FIJOS POR CALIBRACION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!)
 int cmd_PWMDer(float omegaDer) {
 
-  if (abs(omegaDer) > omegaMAX) {
-    omegaDer = omegaMAX * (omegaDer / abs(omegaDer));
-  }
-  if (abs(omegaDer) < omegaMIN) {
-    omegaDer = omegaMIN * (omegaDer / abs(omegaDer));
-  }
-
-
-  return (int)((101.5 * abs(omegaDer)) + 103.41) * (omegaDer / abs(omegaDer));
+  return (int)((parameters[7] * abs(omegaDer)) + parameters[8]) * (omegaDer / abs(omegaDer));
+  //return (int)((101.5 * abs(omegaDer)) + 103.41) * (omegaDer / abs(omegaDer));
 }
 
 int cmd_PWMIzq(float omegaIzq) {
 
-  if (abs(omegaIzq) > omegaIzq) {
-    omegaIzq = omegaMAX * (omegaIzq / abs(omegaIzq));
-  }
-  if (abs(omegaIzq) < omegaMIN) {
-    omegaIzq = omegaMIN * (omegaIzq / abs(omegaIzq));
-  }
+  return (int)((parameters[5] * abs(omegaIzq)) + parameters[6]) * (omegaIzq / abs(omegaIzq));
+  //return (int)((111.5 * abs(omegaIzq)) + 112.41) * (omegaIzq / abs(omegaIzq));
+}
 
-  //return (-111.5*omegaIzq) + 132.41;
-  //return (111.5*omegaIzq) + 132.41;
+int movimiento_arco(int PWM_I, int PWM_D) {
 
-  return (int)((111.5 * abs(omegaIzq)) + 112.41) * (omegaIzq / abs(omegaIzq));
+  salPID = pid_arco();
+
+  PWM_I = PWM_I - salPID;
+  PWM_D = PWM_D + salPID;
+
+  motoresPWM(PWM_I, PWM_D);
 }
 
 int movimiento_linea_recta(int PWM_I, int PWM_D) {
@@ -1636,124 +1879,92 @@ int movimiento_linea_recta(int PWM_I, int PWM_D) {
   //int PWM_I = 225;
   //int PWM_D = 215;
 
-  outPIDPWM = pid(); //Ejecuta el PID (error en ángulo!!!), por ahora solo proporcional!!!!!!!
+  salPID = pid(); //Ejecuta el PID
 
-  PWM_I = PWM_I + outPIDPWM;
-  PWM_D = PWM_D - outPIDPWM;
+  PWM_I = PWM_I + salPID;
+  PWM_D = PWM_D - salPID;
 
   //SATURACION.OJO PARAR INTEGRAL del  PID!!!!!!!!!!!!!!!!!
   motoresPWM(PWM_I, PWM_D);
 
-  /*
-  Serial.println("PWM_I");
-  Serial.println(String(PWM_I));
 
-  Serial.println("PWM_D");
-  Serial.println(String(PWM_D));
+}
 
-  Serial.println("###");
-   */
+int inicia_arco() {
+
+  //pararMotores();//Da problemas en teleoperacion
+
+  estadoPID = -1;
+
+  outPID_arco = 0;
+
+  return 0;
+
 }
 
 int inicia_linea_recta() {
 
-  incTErrPWM = 0;
-  tErrPWMAnt = 0;
-  //errorPWM = 0;
-  errorPWMAnterior = 0;
-  errorPWMSum = 0;
-  errorPWMDiff = 0;
+  //pararMotores(); //Da problemas en teleoperacion
+
+  //inicia PID
+  estadoPID = -1;
+
+  //Para cálculo de distancia del movimiento
+  distanciaUS_inicial = valores[1];
+  distanciaUS_anterior = -1;
+
   outPID = 0;
-  outPIDPWM = 0;
 
 
-  azimutRef = azimut;
   azimutAnterior = azimut;
-  distancia = 0;
-  errorPWMAnterior = 0;
-  tErrPWMAnt = millis(); //
 
-  errorPWMSum = 0;
-  errorPWMDiff = 0;
 
-  /*
-    Serial.println("Azimut");
-    Serial.println(azimut);
-    Serial.println("Definiendo la referencia de Azimut !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5");
-    Serial.println(azimutRef);
-    Serial.println("###");
-  */
+  //Nueva confiuración de PID Azimut
+  errorAzimut = 0;  //error P
+  errorAzimutD = 0;  //error D
+  errorAzimutI = 0;   //error I
+  errorAzimutAnterior = 0;
+  tiempoAzimutAnterior = millis();
+  outPID = 0;
 
-  //Arranque de motores
-  analogWrite(motorIAvance, 250); //Valores calculados a mano OJO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  analogWrite(motorIRetroceso, 0);
-  analogWrite(motorDAvance, 240);
-  analogWrite(motorDRetroceso, 0);
 }
 
 int movimiento_giro() {
 
-  int PWM_I = 225;
-  int PWM_D = 215;
+  int PWM_I;
+  int PWM_D;
 
-  outPIDPWM = pid(); //Ejecuta el PID (error en ángulo!!!), y por ahora solo proporcional!!!!!!!
+  outPD = pd(); //Sólo PD
 
-  PWM_I =  (outPIDPWM) + (PWMMIN * (outPIDPWM / abs(outPIDPWM)));
-  PWM_D =  (outPIDPWM * (-1)) - (PWMMIN * (outPIDPWM / abs(outPIDPWM)));
+  //PWM_I =  (outPIDPWM) + (((int)parameters[19]) * (outPIDPWM / abs(outPIDPWM)));
+  //PWM_D =  (outPIDPWM * (-1)) - (((int)parameters[19]) * (outPIDPWM / abs(outPIDPWM)));
+
+  PWM_I = outPD + (((int)parameters[19]) * (outPD / abs(outPD)));
+  PWM_D =  - outPD + (-1) * (((int)parameters[19]) * (outPD / abs(outPD)));
 
   //SATURACION.OJO PARAR INTEGRAL del  PID!!!!!!!!!!!!!!!!!
   motoresPWM(PWM_I, PWM_D);
 
 
-  /*
-    Serial.println("PWM_I");
-    Serial.println(String(PWM_I));
-
-    Serial.println("PWM_D");
-    Serial.println(String(PWM_D));
-
-    Serial.println("azimutRef");
-    Serial.println(String(azimutRef));
-
-    Serial.println("azimut");
-    Serial.println(azimut);
-
-
-    Serial.println("###");
-  */
 
 }
 
 int inicia_giro(float azimutGira) {
 
-  //Falta controlar que azimutGira esté entre -pi y pi FALTA!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  estadoPID == -1; // Sólo PD para guirar
+  outPD = 0;
+
+  //Falta controlar que azimutGira esté entre -pi y pi
 
   azimutRef = azimutGira; // Establece la referencia del azimut
-  incTErrPWM = 0;
-  tErrPWMAnt = 0;
-  // errorPWM = 0;
-  errorPWMAnterior = 0;
-  errorPWMSum = 0;
-  errorPWMDiff = 0;
+
   outPID = 0;
   outPIDPWM = 0;
 
   azimutAnterior = azimut;
-  distancia = 0;
-  errorPWMAnterior = 0;
-  tErrPWMAnt = millis(); //
 
-  errorPWMSum = 0;
-  errorPWMDiff = 0;
-
+  //Arranque de motores
   /*
-   Serial.println("Azimut");
-   Serial.println(azimut);
-   Serial.println("Definiendo la referencia de Azimut !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5");
-   Serial.println(azimutRef);
-   Serial.println("###");
-  */
-
   if (azimutRef >= 0) {
     //Arranque de motores
     analogWrite(motorIAvance, 250); //Valores calculados a mano OJO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1766,80 +1977,103 @@ int inicia_giro(float azimutGira) {
     analogWrite(motorDAvance, 240);
     analogWrite(motorDRetroceso, 0);
   }
+  */
 }
 
 
-int pid() {
-  int kp = 80; //Por el momento sólo PROPORCIONAL
-  int ki = 0;
-  int kd = 0;
+//PD
+int pd() {
+
 
   //P
   errorAzimut = azimutRef - azimut; //Redefine el error
-  //Serial.println("Error azimut");
-  //Serial.println(String(errorAzimut));
-
   errorAzimut = (float)  atan2((double)sin(errorAzimut), (double)cos(errorAzimut));
-
-  //Serial.println("Error entre pi y pi");
-  //Serial.println(String(errorAzimut));
-
-  //I
-  tErrPWM = millis();
-  incTErrPWM = (float)(tErrPWM - tErrPWMAnt);
-  //errorPWMSum += ((errorPWM * incTErrPWM) / 1000);
-
-  //D
-  //errorPWMDiff = 1000 * (errorPWM - errorPWMAnterior) / incTErrPWM;
+  //outPID =  kpd * (errorAzimut);
+  outPID =  ((int)parameters[12]) * (errorAzimut);
 
 
-
-  //outPID = kp * errorAzimut + ki * errorPWMSum + kd * errorPWMDiff; //PID SOBRE VELOCIDAD ANGULAR
-  outPID = kp * errorAzimut;
+  errorAzimutAnterior = errorAzimut;
+  tiempoAzimutAnterior = millis();
 
 
   azimutAnterior = azimut;
-  // 0.135 es la velocidad en metros por segundo paraPWM = 225 (sacada linealmente de extramolar entre 255=0.17m/sg y 200=0.1m/sg)
-  //distancia += (0.135 * incTErrPWM) / 1000.0;
-
-  /*
-  Serial.println("Azimut");
-  Serial.println(String(azimut));
-
-  Serial.println("AzimutRef");
-  Serial.println(String(azimutRef));
-
-  Serial.println("Error azimut");
-  Serial.println(String(errorAzimut));
-
-  Serial.println("Error entre pi y pi");
-  Serial.println(String(errorAzimut));
-
-  Serial.println("errorPWMSum");
-  Serial.println(errorPWMSum);
-
-  Serial.println("errorPWMDiff");
-  Serial.println(errorPWMDiff);
-
-  Serial.println("outPIDPWM");
-  Serial.println(outPIDPWM);
-
-  Serial.println("distancia");
-  Serial.println(distancia);
 
 
-  Serial.println("tErrPWM");
-  Serial.println(String(tErrPWM));
+  return (int)((outPID));
+
+}
 
 
-  Serial.println("incTErrPWM");
-  Serial.println(String(incTErrPWM));
+//PID_arco
+int pid_arco() {
 
-  */
+  //
+  omega_estimada = 1000 * incAzimut / dtAzimut;
+  errorOmega = cmdOmega - omega_estimada;
 
-  //Actualiza los valores para la siguiente vuelta
-  //tErrPWMAnt =  tErrPWM;
-  //errorPWMAnterior = errorPWM;
+  //P
+  if (estadoPID == -1) {
+    outPID_arco = 0;
+    estadoPID = 1;
+  } else {
+    //outPID_arco =  ((int)parameters[15])o * errorOmega;
+    outPID_arco =  ((int)parameters[15]) * errorOmega;
+  }
+
+  //I
+
+  //D
+
+  return (int)((outPID_arco));
+
+}
+
+//PID
+
+int pid() {
+
+
+  //P
+  errorAzimut = azimutRef - azimut; //Redefine el error
+  errorAzimut = (float)  atan2((double)sin(errorAzimut), (double)cos(errorAzimut));
+
+  //I
+  if (estadoPID == -1) {
+    //La primera vez que se ejecuta el PID
+    errorAzimutI = 0;
+  } else {
+    if (estadoPID == 0) {
+      //Si no está saturado. estadoPID==1 si alguno de los actuarores está en el máximo (o mínimo)
+      errorAzimutI += (errorAzimutAnterior * ((float)(millis() - tiempoAzimutAnterior))) ;
+    }
+  }
+
+
+  //D
+  // El estadoPID indica si se inició (-1) o si está saturado (1)
+  if (estadoPID == -1) {
+    estadoPID = 0; // Tras la primera vez que se ejecuta pasa a estado 0, para comenzar a calcular el error D
+  } else {
+    //if ((millis() - tiempoAzimutAnterior) != 0 && errorAzimut>=0.2)
+    //if ((millis() - tiempoAzimutAnterior) != 0 && abs(errorAzimut) >= 0.05)
+    if ((millis() - tiempoAzimutAnterior) != 0)
+      errorAzimutD =  (1000 * (errorAzimut - errorAzimutAnterior)) / (millis() - tiempoAzimutAnterior);
+    else
+      errorAzimutD = 0;
+  }
+
+
+  //outPID =  (((int)parameters[9]) * errorAzimut) + (((int)parameters[10]) * errorAzimutI) + (((int)parameters[11])/10) * errorAzimutD ;
+
+
+
+  //outPID =  ((int)parameters[9]) * (errorAzimut + (2 * errorAzimutI) + (errorAzimutD)/4);
+  outPID =  (((int)parameters[9]) * (errorAzimut)) + (((int)parameters[10]) * (errorAzimutI / 1000)) + (((int)parameters[11]) * errorAzimutD);
+  //Actualización de valores
+  errorAzimutAnterior = errorAzimut;
+  tiempoAzimutAnterior = millis();
+
+  azimutAnterior = azimut;
 
   return (int)((outPID));
 

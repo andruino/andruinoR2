@@ -1,11 +1,29 @@
+/*
+Andruino R2. A DIY open ROS robot, iot compatible
+Andruino comes with ABSOLUTELY NO WARRANTY, to the extent permitted by applicable law
+Versión: 99 Date: 2017/04/19
+Author: @andruinos
+Based on previous works of:  
+Damon Kohler (@damonkohler), Keisuke SUZUKI (@ksksue), Chad Rockey (@chadrockey), Jonathan Cohen (fritzing),
+Brian Gerkey and others (if i forget someone, please tell me) and ROS community.
+CC License Attribution-NonCommercial-ShareAlike 3.0 
+https://creativecommons.org/licenses/by-nc-sa/3.0/
+ */
+
 package es.andruino.andruino_driver;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
+import java.util.Locale;
 
 import jp.ksksue.driver.serial.FTDriver;
 
+import org.apache.http.conn.util.InetAddressUtils;
 import org.ros.android.RosActivity;
 import org.ros.android.view.camera.RosCameraPreviewView;
+import org.ros.namespace.NameResolver;
 import org.ros.node.NodeConfiguration;
 import org.ros.node.NodeMainExecutor;
 
@@ -17,18 +35,18 @@ import android.hardware.Camera;
 import android.hardware.SensorManager;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
-//import android.location.LocationManager;
-
 public class andruino_driver extends RosActivity {
 
 	private static SensorManager mSensorManager;
-	// private static LocationManager mLocationManager;
 
 	// Camara
 	private int cameraId;
@@ -44,30 +62,27 @@ public class andruino_driver extends RosActivity {
 	private andruinoROS_azimut_pub my_andruinoROS_azimut_pub;
 	private andruinoROS_command_sub my_andruinoROS_command_sub;
 	private andruinoROS_sensor_distancia_pub my_andruinoROS_sensor_distancia_pub;
-	// private andruinoROS_sensor_Wifi my_andruinoROS_sensor_wifi_pub;
+	private andruinoROS_sensor_Wifi my_andruinoROS_sensor_wifi_pub;
 	private andruinoROS_cmd_vel my_andruinoROS_cmd_vel;
 	private andruinoROS_odom_pub my_andruinoROS_odom_pub;
 
 	// Nodos de android_driver
 	// private NavSatFixPublisher fix_pub;
 	private ImuPublisher imu_pub;
-	
-	//Variables "globales"
-	static int estado;
-	public static float gAzimut; //Azimut Yaw
-	public static float gOmega; //Velocidad angular
-	public static int HCSR04_1;
-	public static int HCSR04_2;
-	public static int HCSR04_3;
-	public static int LDR1;
-	public static int LDR2;
-	public static int LDR3;
-	public static int dtLoop;
-	public static float distancia;
-	public static float x;
-	public static float y;
-	
-	
+
+	// TTS
+	public static TextToSpeech t1;
+
+	// Variables "globales"
+	public static float gAzimut; // Azimut Yaw
+	public static float gOmega; // Velocidad angular
+	public static float gx;
+	public static float gy;
+	public static float gAzimut_odom;
+	public static int gEstado;
+
+	public static String prefijoNS = "";
+	public static int contador = 0;
 
 	public andruino_driver() {
 		super("andruino_driver", "andruino_driver");
@@ -81,14 +96,15 @@ public class andruino_driver extends RosActivity {
 		// this.getSystemService(Context.LOCATION_SERVICE);
 		mSensorManager = (SensorManager) this.getSystemService(SENSOR_SERVICE);
 
-		// Quita el título de la aplicación y máximiza la pantalla
-		// requestWindowFeature(Window.FEATURE_NO_TITLE);
+		// Quita el título de la aplicación y maximize la pantalla
+		requestWindowFeature(Window.FEATURE_NO_TITLE);
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
 		// Carga el xml
 		setContentView(R.layout.main);
 
 		final Button buttonapagar = (Button) findViewById(R.id.buttonapagar);
+
 		buttonapagar.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				finishAffinity();
@@ -96,32 +112,66 @@ public class andruino_driver extends RosActivity {
 				System.exit(0);
 			}
 		});
+
+		// TTS
+		t1 = new TextToSpeech(getApplicationContext(),
+				new TextToSpeech.OnInitListener() {
+					@Override
+					public void onInit(int status) {
+						if (status != TextToSpeech.ERROR) {
+							t1.setLanguage(Locale.US);
+							t1.speak(
+									"Greetings professor Lopez. Andruino is ready.",
+									TextToSpeech.QUEUE_FLUSH, null);
+						} else {
+							Toast.makeText(getApplicationContext(),
+									"Andruino error: No voice",
+									Toast.LENGTH_SHORT).show();
+						}
+					}
+				});
+		//
+
 		// La pantalla de Android muestra la cámara
 		rosCameraPreviewView = (RosCameraPreviewView) findViewById(R.id.ros_camera_preview_view);
+
 		// Para que no sea visible en la pantalla, tamaño 1 pixel x 1 pixel
-		//&rosCameraPreviewView.getLayoutParams().width = 1;
-		//&rosCameraPreviewView.getLayoutParams().height = 1; //
+		// &rosCameraPreviewView.getLayoutParams().width = 1;
+		// &rosCameraPreviewView.getLayoutParams().height = 1;
 
 		// USB Serial. FTDriver] Crea Instancia
 		mSerial = new FTDriver(
 				(UsbManager) getSystemService(Context.USB_SERVICE));
 
-		// [FTDriver] setPermissionIntent() before begin()
+		// FTDriver
 		PendingIntent permissionIntent = PendingIntent.getBroadcast(this, 0,
 				new Intent(ACTION_USB_PERMISSION), 0);
 		mSerial.setPermissionIntent(permissionIntent);
 
-		// Abre el puerto Serie a 11520. SUBIR !!!!!!! //
-
+		// Abre el puerto Serie a 11520
 		if (mSerial.begin(FTDriver.BAUD115200)) {
 			Toast.makeText(this, "Arduino connected", Toast.LENGTH_SHORT)
 					.show();
+
 		} else {
 			Toast.makeText(this,
 					"Andruino error: Arduino not connect to Android",
 					Toast.LENGTH_SHORT).show();
+			try {
+				Thread.sleep(5000);
+			} catch (InterruptedException e) {
+
+			}
 			onDestroy();
 		}
+
+		// Inicia las variables globlales
+		gx = 0f;
+		gy = 0f;
+		gAzimut = 0f;
+		gOmega = 0f;
+		gEstado = 0;
+		gAzimut_odom = 0f;
 
 	}
 
@@ -137,7 +187,7 @@ public class andruino_driver extends RosActivity {
 		// [FTDriver] Close USB Serial
 		mSerial.end();
 
-		// Desregistar todos los sensores FALTA!!!!!!!!!!!!!!!!!!!
+		// Falta Desregistar todos los sensores
 
 		super.onDestroy();
 		finishAffinity();
@@ -187,72 +237,69 @@ public class andruino_driver extends RosActivity {
 		// Crea el talker
 		my_andruinoROS_sensor_distancia_pub = new andruinoROS_sensor_distancia_pub();
 		// Creal el Listener
-		my_andruinoROS_cmd_vel= new andruinoROS_cmd_vel();
+		my_andruinoROS_cmd_vel = new andruinoROS_cmd_vel();
 		// Crea el talker
-		my_andruinoROS_odom_pub=new andruinoROS_odom_pub();
-		
-		
-		//Inicia variables globales
-		estado=0;
-		gAzimut=0; //Azimut Yaw
-		gOmega=0; //Velocidad angular
-		HCSR04_1=0;
-		HCSR04_2=0;
-		HCSR04_3=0	;
-		LDR1=0;
-		LDR2=0;
-		LDR3=0;
-		dtLoop=0;
-		distancia=0;
-		x=0;
-		y=0;
-		//
+		my_andruinoROS_odom_pub = new andruinoROS_odom_pub();
+
+		String acadenaAux = "";
 
 		// CAMERA
 
 		try {
-			java.net.Socket socket = new java.net.Socket(getMasterUri().getHost(), getMasterUri().getPort());
-            java.net.InetAddress local_network_address = socket.getLocalAddress();
-            socket.close();
-            NodeConfiguration nodeConfiguration5 =
-                    NodeConfiguration.newPublic(local_network_address.getHostAddress(), getMasterUri());
-            // NodeConfiguration nodeConfiguration5 =NodeConfiguration.newPublic(InetAddressFactory.newNonLoopback().getHostAddress());
-    		// https://github.com/rosjava/android_core/issues/147 !!!!
-            // https://github.com/rosjava/android_apps/blob/indigo/teleop/src/main/java/com/github/rosjava/android_apps/teleop/MainActivity.java#L76-L80
-            
-		cameraId = 0;
-		rosCameraPreviewView.setCamera(Camera.open(cameraId));
-		
+			java.net.Socket socket = new java.net.Socket(getMasterUri()
+					.getHost(), getMasterUri().getPort());
+			java.net.InetAddress local_network_address = socket
+					.getLocalAddress();
 
+			acadenaAux = getLocalIpAddress();
 
-			//NodeConfiguration nodeConfiguration5 = NodeConfiguration.newPublic(local_network_address.getHostAddress(), getMasterUri());
-			
+			String[] trozos = acadenaAux.split("\\.");
+			if (trozos[3].length() > 0)
+				prefijoNS = "/andruino" + trozos[3].trim();
+			else
+				prefijoNS = "/andruino";
+
+			socket.close();
+
+			NodeConfiguration nodeConfiguration5 = NodeConfiguration.newPublic(
+					local_network_address.getHostAddress(), getMasterUri());
+
+			NameResolver res = NameResolver.newFromNamespace(prefijoNS);
+			nodeConfiguration5.setParentResolver(res);
+
+			cameraId = 0;
+			rosCameraPreviewView.setCamera(Camera.open(cameraId));
+
 			nodeConfiguration5.setMasterUri(getMasterUri());
 			nodeConfiguration5.setNodeName("andruino_driver_camera");
 			nodeMainExecutor.execute(rosCameraPreviewView, nodeConfiguration5);
-			
-		
-			//NodeConfiguration nodeConfiguration = NodeConfiguration.newPublic(InetAddressFactory.newNonLoopback().getHostAddress());
-			NodeConfiguration nodeConfiguration = NodeConfiguration.newPublic(local_network_address.getHostAddress(), getMasterUri());
+
+			NodeConfiguration nodeConfiguration = NodeConfiguration.newPublic(
+					local_network_address.getHostAddress(), getMasterUri());
+			nodeConfiguration.setParentResolver(res);
 			nodeConfiguration.setMasterUri(getMasterUri());
 
 			// Azimut
-		
+
 			nodeConfiguration.setNodeName("andruino_driver_azimut");
 			nodeMainExecutor.execute(my_andruinoROS_azimut_pub,
 					nodeConfiguration);
-		
-			//NodeConfiguration nodeConfiguration = NodeConfiguration.newPublic(InetAddressFactory.newNonLoopback().getHostAddress());
-			NodeConfiguration nodeConfiguration10 = NodeConfiguration.newPublic(local_network_address.getHostAddress(), getMasterUri());
+
+			NodeConfiguration nodeConfiguration10 = NodeConfiguration
+					.newPublic(local_network_address.getHostAddress(),
+							getMasterUri());
 			nodeConfiguration10.setMasterUri(getMasterUri());
+			nodeConfiguration10.setParentResolver(res);
 
 			// Comandos
 			nodeConfiguration10.setNodeName("andruino_driver_command");
 			nodeMainExecutor.execute(my_andruinoROS_command_sub,
 					nodeConfiguration10);
-			
-			//NodeConfiguration nodeConfiguration = NodeConfiguration.newPublic(InetAddressFactory.newNonLoopback().getHostAddress());
-			NodeConfiguration nodeConfiguration11 = NodeConfiguration.newPublic(local_network_address.getHostAddress(), getMasterUri());
+
+			NodeConfiguration nodeConfiguration11 = NodeConfiguration
+					.newPublic(local_network_address.getHostAddress(),
+							getMasterUri());
+			nodeConfiguration11.setParentResolver(res);
 			nodeConfiguration11.setMasterUri(getMasterUri());
 
 			// Distancia y edidas del arduino
@@ -264,160 +311,128 @@ public class andruino_driver extends RosActivity {
 			/*
 			 * //NodeConfiguration nodeConfiguration2 = NodeConfiguration
 			 * .newPublic(InetAddressFactory.newNonLoopback().getHostAddress());
-			 * 	NodeConfiguration nodeConfiguration2 = NodeConfiguration.newPublic(local_network_address.getHostAddress(), getMasterUri());
+			 * NodeConfiguration nodeConfiguration2 =
+			 * NodeConfiguration.newPublic
+			 * (local_network_address.getHostAddress(), getMasterUri());
 			 * nodeConfiguration2.setMasterUri(getMasterUri());
-			 * nodeConfiguration2.setNodeName("android_driver_nav_sat_fix");
+			 * nodeConfiguration2.setNodeName("andruino_driver_nav_sat_fix");
 			 * this.fix_pub = new NavSatFixPublisher(mLocationManager);
 			 * nodeMainExecutor.execute(this.fix_pub, nodeConfiguration2);
 			 */
 
 			// IMU from android sensor
-			
-			 //NodeConfiguration nodeConfiguration3 = NodeConfiguration.newPublic(InetAddressFactory.newNonLoopback().getHostAddress());
-			 NodeConfiguration nodeConfiguration3 = NodeConfiguration.newPublic(local_network_address.getHostAddress(), getMasterUri());
-			 nodeConfiguration3.setMasterUri(getMasterUri());
-			  
-			 nodeConfiguration3.setNodeName("andruino_driver_imu");
-			 this.imu_pub = new ImuPublisher(mSensorManager);
-			 nodeMainExecutor.execute(this.imu_pub, nodeConfiguration3);
-			 
+
+			NodeConfiguration nodeConfiguration3 = NodeConfiguration.newPublic(
+					local_network_address.getHostAddress(), getMasterUri());
+			nodeConfiguration3.setParentResolver(res);
+			nodeConfiguration3.setMasterUri(getMasterUri());
+			nodeConfiguration3.setNodeName("andruino_driver_imu");
+			this.imu_pub = new ImuPublisher(mSensorManager);
+			nodeMainExecutor.execute(this.imu_pub, nodeConfiguration3);
 
 			// Wifi beacon sensor
-			/*
-			 * NodeConfiguration nodeConfiguration4 = NodeConfiguration
-			 * .newPublic(InetAddressFactory.newNonLoopback().getHostAddress());
-			 * nodeConfiguration4.setMasterUri(getMasterUri());
-			 * nodeConfiguration4.setNodeName("andruino_driver_levels");
-			 * my_andruinoROS_sensor_wifi_pub = new
-			 * andruinoROS_sensor_Wifi(this);
-			 * nodeMainExecutor.execute(my_andruinoROS_sensor_wifi_pub,
-			 * nodeConfiguration4);
-			 */
-			
-			//NodeConfiguration nodeConfiguration = NodeConfiguration.newPublic(InetAddressFactory.newNonLoopback().getHostAddress());
-			NodeConfiguration nodeConfiguration12 = NodeConfiguration.newPublic(local_network_address.getHostAddress(), getMasterUri());
+
+			NodeConfiguration nodeConfiguration4 = NodeConfiguration.newPublic(
+					local_network_address.getHostAddress(), getMasterUri());
+			nodeConfiguration4.setParentResolver(res);
+			nodeConfiguration4.setMasterUri(getMasterUri());
+			nodeConfiguration4.setNodeName("andruino_driver_levels");
+			my_andruinoROS_sensor_wifi_pub = new andruinoROS_sensor_Wifi(this);
+			nodeMainExecutor.execute(my_andruinoROS_sensor_wifi_pub,
+					nodeConfiguration4);
+
+			NodeConfiguration nodeConfiguration12 = NodeConfiguration
+					.newPublic(local_network_address.getHostAddress(),
+							getMasterUri());
+			nodeConfiguration12.setParentResolver(res);
 			nodeConfiguration12.setMasterUri(getMasterUri());
 
 			// Comandos
 			nodeConfiguration12.setNodeName("andruino_driver_cmd_vel");
-			nodeMainExecutor.execute(my_andruinoROS_cmd_vel,nodeConfiguration12);
+			nodeMainExecutor.execute(my_andruinoROS_cmd_vel,
+					nodeConfiguration12);
 
-			//Odom
-			NodeConfiguration nodeConfiguration13 = NodeConfiguration.newPublic(local_network_address.getHostAddress(), getMasterUri());
+			// Odom
+			NodeConfiguration nodeConfiguration13 = NodeConfiguration
+					.newPublic(local_network_address.getHostAddress(),
+							getMasterUri());
+			nodeConfiguration13.setParentResolver(res);
 			nodeConfiguration13.setMasterUri(getMasterUri());
-
 			nodeConfiguration13.setNodeName("andruino_driver_odom");
-			nodeMainExecutor.execute(my_andruinoROS_odom_pub,nodeConfiguration13);
+			nodeMainExecutor.execute(my_andruinoROS_odom_pub,
+					nodeConfiguration13);
 
-			
 		} catch (IOException e) {
-            // Socket problem
-        }
+			// Socket problem
+		}
 
 	}
 
-	public static int getEstado() {
-		return estado;
-	}
-
-	public static void setEstado(int estado) {
-		andruino_driver.estado = estado;
-	}
-
-	public static float getgAzimut() {
+	public float getgAzimut() {
 		return gAzimut;
 	}
 
-	public static void setgAzimut(float gAzimut) {
-		andruino_driver.gAzimut = gAzimut;
+	public void setgAzimut(float gAzimut) {
+		this.gAzimut = gAzimut;
 	}
 
-	public static float getgOmega() {
+	public float getgOmega() {
 		return gOmega;
 	}
 
-	public static void setgOmega(float gOmega) {
-		andruino_driver.gOmega = gOmega;
+	public void setgOmega(float gOmega) {
+		this.gOmega = gOmega;
 	}
 
-	public static int getHCSR04_1() {
-		return HCSR04_1;
+	public float getGx() {
+		return gx;
 	}
 
-	public static void setHCSR04_1(int hCSR04_1) {
-		HCSR04_1 = hCSR04_1;
+	public static void setGx(float gx) {
+		andruino_driver.gx = gx;
 	}
 
-	public static int getHCSR04_2() {
-		return HCSR04_2;
+	public float getGy() {
+		return gy;
 	}
 
-	public static void setHCSR04_2(int hCSR04_2) {
-		HCSR04_2 = hCSR04_2;
+	public void setGy(float gy) {
+		this.gy = gy;
 	}
 
-	public static int getHCSR04_3() {
-		return HCSR04_3;
+	public int getgEstado() {
+		return gEstado;
 	}
 
-	public static void setHCSR04_3(int hCSR04_3) {
-		HCSR04_3 = hCSR04_3;
+	public void setgEstado(int gEstado) {
+		this.gEstado = gEstado;
 	}
 
-	public static int getLDR1() {
-		return LDR1;
-	}
+	public String getLocalIpAddress() {
+		// From http://stackoverflow.com/questions/11015912/how-do-i-get-ip-address-in-ipv4-format
+		try {
+			for (Enumeration<NetworkInterface> en = NetworkInterface
+					.getNetworkInterfaces(); en.hasMoreElements();) {
+				NetworkInterface intf = en.nextElement();
+				for (Enumeration<InetAddress> enumIpAddr = intf
+						.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+					InetAddress inetAddress = enumIpAddr.nextElement();
 
-	public static void setLDR1(int lDR1) {
-		LDR1 = lDR1;
-	}
+					String ipv4;
+					if (!inetAddress.isLoopbackAddress()
+							&& InetAddressUtils
+									.isIPv4Address(ipv4 = inetAddress
+											.getHostAddress())) {
 
-	public static int getLDR2() {
-		return LDR2;
-	}
-
-	public static void setLDR2(int lDR2) {
-		LDR2 = lDR2;
-	}
-
-	public static int getLDR3() {
-		return LDR3;
-	}
-
-	public static void setLDR3(int lDR3) {
-		LDR3 = lDR3;
-	}
-
-	public static int getDtLoop() {
-		return dtLoop;
-	}
-
-	public static void setDtLoop(int dtLoop) {
-		andruino_driver.dtLoop = dtLoop;
-	}
-
-	public static float getDistancia() {
-		return distancia;
-	}
-
-	public static void setDistancia(float distancia) {
-		andruino_driver.distancia = distancia;
-	}
-
-	public static float getX() {
-		return x;
-	}
-
-	public static void setX(float x) {
-		andruino_driver.x = x;
-	}
-
-	public static float getY() {
-		return y;
-	}
-
-	public static void setY(float y) {
-		andruino_driver.y = y;
+						String ip = inetAddress.getHostAddress().toString();
+						return ip;
+					}
+				}
+			}
+		} catch (Exception ex) {
+			Log.e("IP Address", ex.toString());
+		}
+		return null;
 	}
 
 }

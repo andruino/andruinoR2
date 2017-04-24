@@ -1,34 +1,29 @@
 package es.andruino.andruino_driver;
 
 import geometry_msgs.TransformStamped;
+
+import java.util.List;
+
 import nav_msgs.Odometry;
 
 import org.ros.concurrent.CancellableLoop;
+import org.ros.message.MessageFactory;
 import org.ros.message.Time;
 import org.ros.namespace.GraphName;
 import org.ros.node.ConnectedNode;
 import org.ros.node.Node;
 import org.ros.node.NodeMain;
 import org.ros.node.topic.Publisher;
-import org.ros.message.MessageFactory;
 
-import tf2_msgs.TFMessage;
-import org.ros.message.MessageFactory;
-import android.os.SystemClock;
-import java.util.List;
-
-//import sensor_msgs.Range;
+import tf.tfMessage;
+//import tf2_msgs.TFMessage;
+//import tf2_msgs.TFMessage; //tf2
 
 public class andruinoROS_odom_pub implements NodeMain {
 
 	String base_frame_id = "base_link";
 	String odom_frame_id = "odom";
-	/*
-	private Publisher<Odometry> odometryPublisher;
-	private Publisher<TFMessage> tfPublisher;
-	private TransformStamped odomToBaseLink;
-	private TransformStamped baseToLaser;
-*/
+
 	@Override
 	public void onError(Node arg0, Throwable arg1) {
 		// TODO Auto-generated method stub
@@ -57,20 +52,12 @@ public class andruinoROS_odom_pub implements NodeMain {
 	@Override
 	public void onStart(final ConnectedNode node) {
 
-		
-		//final Publisher<Odometry> publisher = node.newPublisher("andruino/odom", "nav_msgs/Odometry");
-		//final Publisher<TransformStamped> broadcaster = node.newPublisher("andruino/tf", "geometry_msgs/TransformStamped");
-		final Publisher<Odometry> publisher = node.newPublisher("/odom", "nav_msgs/Odometry");
-		//final Publisher<TransformStamped> broadcaster = node.newPublisher("/tf", "geometry_msgs/TransformStamped");
-		//final Publisher<TFMessage> broadcaster = node.newPublisher("tf", TFMessage._TYPE); //!
-		final Publisher<TransformStamped> broadcaster = node.newPublisher("/tf", TransformStamped._TYPE);
-		
-	/*
-		odometryPublisher = node.newPublisher("/odom", "nav_msgs/Odometry");
-		tfPublisher = node.newPublisher("/tf", TFMessage._TYPE);
-		//odomToBaseLink = mMessageFactory.newFromType(TransformStamped._TYPE);
-		odomToBaseLink= tfPublisher.newMessage();
-		*/
+		final Publisher<Odometry> publisher = node.newPublisher("odom",
+				"nav_msgs/Odometry");
+		final Publisher<tfMessage> publisher2 = node.newPublisher("/tf",
+				tfMessage._TYPE);
+		final MessageFactory mMessageFactory = node.getTopicMessageFactory();
+
 		node.executeCancellableLoop(new CancellableLoop() {
 
 			@Override
@@ -79,52 +66,68 @@ public class andruinoROS_odom_pub implements NodeMain {
 			}
 
 			protected void loop() throws InterruptedException {
-				
-				
-				
-				
-				
-				long time_delta_millis = System.currentTimeMillis(); // - SystemClock.uptimeMillis();
-				// publish the odom information
-				TransformStamped transform = broadcaster.newMessage();
-				//TransformStamped transform = node.newPublisher("/tf", "geometry_msgs/TransformStamped").newMessage();
-				transform.getTransform().getRotation().setX(0);
-				transform.getTransform().getRotation().setY(0);
-				transform.getTransform().getRotation().setZ(Math.sin(andruino_driver.gAzimut / 2));
-				transform.getTransform().getRotation().setW(Math.cos(andruino_driver.gAzimut / 2));
-				transform.getTransform().getTranslation().setX(andruino_driver.x);
-				transform.getTransform().getTranslation().setY(andruino_driver.y);
-				transform.getTransform().getTranslation().setZ(0);
-				transform.getHeader().setStamp(Time.fromMillis(time_delta_millis));
-				transform.setChildFrameId(odom_frame_id);
-				transform.getHeader().setFrameId(base_frame_id);
-				//transform.setChildFrameId(base_frame_id);
-				//transform.getHeader().setFrameId(odom_frame_id);
-				broadcaster.publish(transform);
-				
-				//TFMessage tfm=broadcaster2.newMessage(); //!
-				//List<TransformStamped> tf1 = tfm.getTransforms();
-				//tf1.add(transform);
-			    //broadcaster2.publish(tfm);
-				
+
+				geometry_msgs.Quaternion cuaternio;
+
+				long time_delta_millis = System.currentTimeMillis();
+
+				// ODOM
 				Odometry odom = publisher.newMessage();
-				odom.getHeader().setStamp(Time.fromMillis(time_delta_millis)); //setStamp(new Time());
-				odom.getHeader().setFrameId(odom_frame_id);
-				odom.getPose().getPose().getPosition().setX(andruino_driver.x);
-				odom.getPose().getPose().getPosition().setY(andruino_driver.y);
+				odom.getHeader().setStamp(Time.fromMillis(time_delta_millis));
+				odom.getHeader().setFrameId("odom");
+
+				odom.setChildFrameId("base_link");
+
+				odom.getPose().getPose().getPosition()
+						.setX((double) andruino_driver.gx);
+				odom.getPose().getPose().getPosition()
+						.setY((double) andruino_driver.gy);
 				odom.getPose().getPose().getPosition().setZ(0);
-				
-				
-				odom.getPose().getPose()
-						.setOrientation(transform.getTransform().getRotation());
-				// Lo que está comentado se saca del sensor Android
-				odom.setChildFrameId(base_frame_id);
-				odom.getTwist().getTwist().getLinear().setX(andruinoROS_cmd_vel.vel_lin); //CAMBIAR!!! LA VELOCIDD LA COGE DEL COMANDO Y NO DEL ARDUINO. DEBE DARLA EL ARDUINO (CAMBIAR!!!). VERIFICAR!!!!!
-				odom.getTwist().getTwist().getLinear().setY(0);
-				odom.getTwist().getTwist().getAngular().setZ(andruino_driver.gOmega); //VERIFICaR !!!!
+
+				cuaternio = node.getTopicMessageFactory().newFromType(
+						geometry_msgs.Quaternion._TYPE);
+				cuaternio.setX(0.0);
+				cuaternio.setY(0.0);
+				cuaternio.setZ(Math.sin(andruino_driver.gAzimut_odom / 2.0));
+				cuaternio.setW(Math.cos(andruino_driver.gAzimut_odom / 2.0));
+				odom.getPose().getPose().setOrientation(cuaternio);
+
+				double[] tmpCov = { 1e-2, 0, 0, 0, 0, 0, 0, 1e-2, 0, 0, 0, 0,
+						0, 0, 1e6, 0, 0, 0, 0, 0, 0, 1e6, 0, 0, 0, 0, 0, 0,
+						1e6, 0, 0, 0, 0, 0, 0, 1e3 };
+
+				odom.getPose().setCovariance(tmpCov);
+
 				publisher.publish(odom);
 
-			
+				// TF de base_link a odom
+				TransformStamped odom2base_link = mMessageFactory
+						.newFromType(TransformStamped._TYPE);
+				odom2base_link.getHeader().setStamp(
+						Time.fromMillis(time_delta_millis));
+				odom2base_link.getHeader().setFrameId("odom");
+				odom2base_link.setChildFrameId("base_link");
+
+				odom2base_link.getTransform().getTranslation()
+						.setX((double) andruino_driver.gx);
+				odom2base_link.getTransform().getTranslation()
+						.setY((double) andruino_driver.gy);
+				odom2base_link.getTransform().getTranslation().setZ(0.0);
+
+				odom2base_link.getTransform().getRotation().setX(0.0);
+				odom2base_link.getTransform().getRotation().setY(0.0);
+				odom2base_link.getTransform().getRotation()
+						.setZ(Math.sin(andruino_driver.gAzimut_odom / 2.0));
+				odom2base_link.getTransform().getRotation()
+						.setW(Math.cos(andruino_driver.gAzimut_odom / 2.0));
+
+				// Publicacion TF
+				tfMessage tfm = publisher2.newMessage();
+				List<TransformStamped> tfl = tfm.getTransforms();
+				tfl.add(odom2base_link);
+				publisher2.publish(tfm);
+
+				Thread.sleep(100);
 
 			}
 

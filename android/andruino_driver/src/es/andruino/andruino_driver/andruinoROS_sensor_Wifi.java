@@ -16,7 +16,7 @@ public class andruinoROS_sensor_Wifi implements NodeMain {
 
 	public andruinoROS_sensor_Wifi(Context c) {
 		miSensorWifi = new sensorWifi(c);
-		//origen=false;
+
 	}
 
 	@Override
@@ -40,10 +40,9 @@ public class andruinoROS_sensor_Wifi implements NodeMain {
 	@Override
 	public void onStart(final ConnectedNode node) {
 		final Publisher<std_msgs.String> publisher = node.newPublisher(
-				"andruino/beacons", "std_msgs/String");
+				"beacons", "std_msgs/String");
 
 		node.executeCancellableLoop(new CancellableLoop() {
-			
 
 			@Override
 			protected void setup() {
@@ -53,26 +52,17 @@ public class andruinoROS_sensor_Wifi implements NodeMain {
 			@Override
 			protected void loop() throws InterruptedException {
 
-			
-				StringBuffer mensaje = new StringBuffer();
-
 				StringBuffer srbuf;
 
-				srbuf = new StringBuffer(miSensorWifi.getBeacons());
-
-				mensaje.append(srbuf);
-				
-				String wbuf = "iiibbb" + String.valueOf(miSensorWifi.corr) + "ww" + "###";
-				
-				andruino_driver.mSerial.write(wbuf.getBytes());
+				// Publica la correlación más todos los puntos obtenidos
 
 				std_msgs.String str = publisher.newMessage();
 
-				str.setData(" Puntos de acceso próximos: " + miSensorWifi.getBeacons() + "\n");
-				
+				str.setData(miSensorWifi.getBeacons());
+
 				publisher.publish(str);
-				
-				Thread.sleep(1000);
+
+				Thread.sleep(3333);
 			}
 
 		});

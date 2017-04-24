@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<robot name="andruinor2">
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.1490 0.09 0.09"/>
+      </geometry>
+      <material name="silver">
+        <color rgba="0.75 0.75 0.75 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.1490 0.09 0.09"/>
+      </geometry>
+    </collision>
+   
+  </link>
+
+  
+
+  <link name="hc_sr04_1_link">
+    <visual>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
+  
+  </link>
+
+<joint name="hc_sr04_1_joint" type="fixed">
+  <parent link="base_link"/>
+  <child link="hc_sr04_1_link"/>
+  <origin xyz="0 0 0" rpy="0 0 0.157" />
+</joint>
+
+<sensor  name="hc_sr04_1">
+   <parent link="hc_sr04_1_link"/>
+   <origin xyz="0.2 0.2 0.2" rpy="0 0 0"/>
+   <ray>
+     <horizontal samples="100" resolution="1" min_angle="-1.5708" max_angle="1.5708"/>
+   </ray>
+ </sensor>
+
+</robot>

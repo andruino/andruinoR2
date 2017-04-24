@@ -1,0 +1,24 @@
+Colocalos el robot dando vueltas y grabamos el tf y el scan con:
+rosbag record -O data.bag /scan /tf
+
+Al teminar comprobamos que se guardó correctamente con:
+rosbag info data.bag
+
+Ahora paramos el robot real (importante!) y le indicamos a roscore que vamos a usar el tiempo de simulación
+rosparam set use_sim_time true
+
+Ajustalos los valores de gmapping al tamaño de las habtaciones
+rosparam set /slam_gmapping/xmin -5;
+rosparam set /slam_gmapping/ymin -5
+rosparam set /slam_gmapping/xmax 5;
+rosparam set /slam_gmapping/ymax 5;
+
+Ponemos a funcionar el gmapping
+rosrun gmapping slam_gmapping 
+
+y en otro terminal repoducimos el bag anteriormente almacenado.
+rosbag play --clock data.bag
+
+Cuando termine generamos le mapa con
+rosrun map_server map_saver
+

@@ -1,31 +1,4 @@
-/*
- * Copyright (c) 2011, Chad Rockey
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the Android Sensors Driver nor the names of its
- *       contributors may be used to endorse or promote products derived from
- *       this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Modified by Paco Lopez (@andruinos) from ImuPlisher.java (Chad Rockey)
 
 package es.andruino.andruino_driver;
 
@@ -37,7 +10,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Looper;
-import android.os.SystemClock;
+
 
 import org.ros.node.ConnectedNode;
 import org.ros.message.Time;
@@ -47,10 +20,7 @@ import org.ros.node.Node;
 import org.ros.node.NodeMain;
 import org.ros.node.topic.Publisher;
 
-/**
- * @author chadrockey@gmail.com (Chad Rockey)
- * @author axelfurlan@gmail.com (Axel Furlan)
- */
+
 public class ImuPublisher implements NodeMain
 {
 
@@ -87,6 +57,7 @@ public class ImuPublisher implements NodeMain
 			this.sensorManager.registerListener(this.sensorListener, this.gyroSensor, SensorManager.SENSOR_DELAY_FASTEST);
 			this.sensorManager.registerListener(this.sensorListener, this.quatSensor, SensorManager.SENSOR_DELAY_FASTEST);
 			Looper.loop();
+			
 	  }
 	    
 	    
@@ -137,9 +108,11 @@ public class ImuPublisher implements NodeMain
 	{
 		if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
 		{
-			this.imu.getLinearAcceleration().setX(event.values[0]);
+			
+			this.imu.getLinearAcceleration().setX(-1*event.values[2]);
 			this.imu.getLinearAcceleration().setY(event.values[1]);
-			this.imu.getLinearAcceleration().setZ(event.values[2]);
+			this.imu.getLinearAcceleration().setZ(0.0);
+			
 			
 			double[] tmpCov = {0.01,0,0, 0,0.01,0, 0,0,0.01};// TODO Make Parameter
 			this.imu.setLinearAccelerationCovariance(tmpCov);
@@ -147,44 +120,53 @@ public class ImuPublisher implements NodeMain
 		}
 		else if(event.sensor.getType() == Sensor.TYPE_GYROSCOPE)
 		{
-			this.imu.getAngularVelocity().setX(event.values[0]);
-			this.imu.getAngularVelocity().setY(event.values[1]);
-			this.imu.getAngularVelocity().setZ(event.values[2]);
+			
+			this.imu.getAngularVelocity().setX(0.0);
+			this.imu.getAngularVelocity().setY(0.0);
+			this.imu.getAngularVelocity().setZ(event.values[0]);
+			
 			double[] tmpCov = {0.0025,0,0, 0,0.0025,0, 0,0,0.0025};// TODO Make Parameter
 			this.imu.setAngularVelocityCovariance(tmpCov);
 	        this.gyroTime = event.timestamp;
 		}
 		else if(event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR)
-		//else if(event.sensor.getType() == Sensor.TYPE_GAME_ROTATION_VECTOR)
+		
 		{
 	        float[] quaternion = new float[4];
-	        SensorManager.getQuaternionFromVector(quaternion, event.values);
-	        this.imu.getOrientation().setW(quaternion[0]);
-	        this.imu.getOrientation().setX(quaternion[1]);
-	        this.imu.getOrientation().setY(quaternion[2]);
-	        this.imu.getOrientation().setZ(quaternion[3]);
+	        
+	        float[] rMat = new float[9]; //
+	        float[] orientation = new float[3]; //
+	        
+	     
+	        SensorManager.getRotationMatrixFromVector(rMat, event.values);      
+	        this.imu.getOrientation().setX(0.0);
+	        this.imu.getOrientation().setY(0.0);
+	        
+	       this.imu.getOrientation().setZ(Math.sin(andruino_driver.gAzimut / 2.0));
+	        this.imu.getOrientation().setW(Math.cos(andruino_driver.gAzimut / 2.0));
+	        
 			double[] tmpCov = {0.001,0,0, 0,0.001,0, 0,0,0.001};// TODO Make Parameter
 			this.imu.setOrientationCovariance(tmpCov);
 	       	this.quatTime = event.timestamp;
 		}
 		
-		// Currently storing event times in case I filter them in the future.  Otherwise they are used to determine if all sensors have reported.
 		if((this.accelTime != 0 || !this.hasAccel) && (this.gyroTime != 0 || !this.hasGyro) && (this.quatTime != 0 || !this.hasQuat))
 		{
-			// Convert event.timestamp (nanoseconds uptime) into system time, use that as the header stamp
-			long time_delta_millis = System.currentTimeMillis() - SystemClock.uptimeMillis();
-			this.imu.getHeader().setStamp(Time.fromMillis(time_delta_millis + event.timestamp/1000000));
-			//this.imu.getHeader().setFrameId("/imu");// TODO Make parameter
+			
+			long time_delta_millis = System.currentTimeMillis();
+			this.imu.getHeader().setStamp(Time.fromMillis(time_delta_millis));
+				
+			this.imu.getHeader().setFrameId("base_footprint"); //ASí funciona robot_pose_ekf
 			
 			publisher.publish(this.imu);
 
-			// Create a new message
 			this.imu = this.publisher.newMessage();
 			
 			// Reset times
 			this.accelTime = 0;
 			this.gyroTime = 0;
 			this.quatTime = 0;
+			
 		}
 	}
   }
@@ -197,8 +179,7 @@ public class ImuPublisher implements NodeMain
 
   public GraphName getDefaultNodeName()
   {
-	    //return GraphName.of("android_sensors_driver/imuPublisher");
-	  	return GraphName.of("andruino_driver/imuPublisher");
+	  return GraphName.of("andruino_driver/imuPublisher");
   }
   
   public void onError(Node node, Throwable throwable)
@@ -209,10 +190,9 @@ public class ImuPublisher implements NodeMain
   {
 	  try
 	  {
-			//this.publisher = node.newPublisher("android/imu", "sensor_msgs/Imu");
-		  this.publisher = node.newPublisher("andruino/imu", "sensor_msgs/Imu");
-			// 	Determine if we have the various needed sensors
-			boolean hasAccel = false;
+		  this.publisher = node.newPublisher("imu", "sensor_msgs/Imu");	
+		  
+		  	boolean hasAccel = false;
 			boolean hasGyro = false;
 			boolean hasQuat = false;
 	

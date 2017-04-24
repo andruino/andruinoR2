@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
+import org.ros.message.Time;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -21,6 +22,8 @@ class sensorWifi extends BroadcastReceiver {
 	StringBuilder sb = new StringBuilder();
 	Context contexto;
 	double corr;
+
+	int contador = 0;
 
 	HashMap<String, Integer> AP2Power = new HashMap<String, Integer>(); // Punto
 																		// Actual
@@ -64,22 +67,29 @@ class sensorWifi extends BroadcastReceiver {
 		// Borrar el hashMap
 		AP2Power.clear();
 
+		contador++;
+		
+		int coindicencia_ap=0;
+
 		for (int i = 0; i < wifiList.size(); i++) {
 
 			// En lugar de llevar todos los datos del wifiList sólo llevo BSSID
 			// y los dBm
 			AP2Power.put((wifiList.get(i)).BSSID, (wifiList.get(i)).level);
-
-			sb.append((wifiList.get(i)).BSSID);
-			sb.append(";");
-			sb.append(AP2Power.get((wifiList.get(i)).BSSID));
-			sb.append("\n");
+			/*
+			 * sb.append((wifiList.get(i)).BSSID); sb.append(";");
+			 * sb.append(AP2Power.get((wifiList.get(i)).BSSID));
+			 * sb.append("\n");
+			 */
 
 		}
 
 		// Depuración si no tiene origen definido lo coge
-		if (AP2PowerOrigen.size() < 5) {
+		// if (AP2PowerOrigen.size() < 5) {
+		if (contador < 10) {
 			defineOrigin();
+		
+			
 			// AP2PowerOrigen = (HashMap<String, Integer>) AP2Power.clone();
 
 		} else {
@@ -112,7 +122,9 @@ class sensorWifi extends BroadcastReceiver {
 				z[i] = 0.0;
 			}
 			int i = 0;
-
+			
+			coindicencia_ap=0;
+			
 			for (String SSIDOrigen : AP2PowerOrigen.keySet()) {
 
 				int diffPowerParcial = 0;
@@ -121,19 +133,22 @@ class sensorWifi extends BroadcastReceiver {
 				z[i] = (double) MinPower - (Math.random());
 
 				if (AP2Power.containsKey(SSIDOrigen)) {
-					diffPowerParcial = Math.abs(AP2PowerOrigen.get(SSIDOrigen)
-							- AP2Power.get(SSIDOrigen));
-					y[i] = (double) AP2Power.get(SSIDOrigen);
+						diffPowerParcial = Math.abs(AP2PowerOrigen
+								.get(SSIDOrigen) - AP2Power.get(SSIDOrigen));
+						y[i] = (double) AP2Power.get(SSIDOrigen);
+						coindicencia_ap++;
+					
 				} else {
 					diffPowerParcial = Math.abs(MinPower)
 							- Math.abs(AP2PowerOrigen.get(SSIDOrigen));
 
 					y[i] = (double) MinPower - (Math.random()); // -100.0;
+					
 				}
 
 				i++;
 
-				if (diffPowerParcial > 5) // considero 5dBm como variaciones
+				if (diffPowerParcial > Math.abs(AP2PowerOrigen.get(SSIDOrigen))/10)//5) // considero 10dBm como variaciones
 											// leves.
 					diffPower = diffPower + diffPowerParcial;
 
@@ -148,19 +163,42 @@ class sensorWifi extends BroadcastReceiver {
 			}
 
 			corr = new PearsonsCorrelation().correlation(x, y);
+
+			// Quizas debería medir la ORIGINALIDAD DEL PUNTO,
+			// ES DECIR VALORAR LOS NUEVOS PUNTOS QUE NO ESTABAN EN EL ORIGEN
+			// PUES PUEDEN DAR MUCHA INFO (O NO......)
+			// Seria
+			// for (String SSIDOrigen : AP2Power.keySet()) {
+			// y viendo los que no están en el origen.....
+
 			// double corrbase = new PearsonsCorrelation().correlation(x, z);
 
 			/*
-			for (int j = 0; j < AP2PowerOrigen.size(); j++) {
-				sb.append("\n" + Integer.toString(j) + " "
-						+ Double.toString(x[j]) + " " + Double.toString(y[j])
-						+ " " + Double.toString(z[j]) + " ");
+			 * for (int j = 0; j < AP2PowerOrigen.size(); j++) { sb.append("\n"
+			 * + Integer.toString(j) + " " + Double.toString(x[j]) + " " +
+			 * Double.toString(y[j]) + " " + Double.toString(z[j]) + " "); }
+			 */
+			long time_delta_millis = System.currentTimeMillis();
+
+			for (int l = 0; l < wifiList.size(); l++) {
+				sb.append(time_delta_millis);
+				sb.append(","); // Originalemente eran sb.append(",");
+				sb.append((wifiList.get(l)).BSSID);
+				sb.append(",");
+				sb.append(AP2Power.get((wifiList.get(l)).BSSID));
+				sb.append(",");
+				sb.append(Double.toString(corr));
+				int correlacion = (int) (1000 - (corr * 1000));
+				sb.append(",");
+				sb.append(Integer.toString(correlacion));
+				sb.append(",");
+				sb.append(diffPower);
+				sb.append(",");
+				sb.append(coindicencia_ap);
+				sb.append(",");
+				sb.append(wifiList.size()-coindicencia_ap);
+				sb.append("\n");
 			}
-			*/
-			sb.append("\n" + "CORRELACIÓN : " + Double.toString(corr));
-			int correlacion = (int) (1000 - (corr * 1000));
-			sb.append("\n" + "CORRELACIÓN ENTERA: "
-					+ Integer.toString(correlacion));
 
 		}
 
