@@ -1,6 +1,6 @@
 # andruinoR2. 
 
-Paco Lópéz dirigido por Fede. 2016. Será completado e breve
+Paco Lópéz dirigido por Fede. 2017-2020. Será completado e breve
 
 Todo el proyecto Andruino está bajo licencia Creative Commons Atribución-CompartirIgual 	(CC BY-SA)
 
