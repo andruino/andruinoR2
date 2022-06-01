@@ -1,6 +1,6 @@
 # andruinoR2. 
 
-AndruinoR2 is an educational, open and low-cost (35-40 €) ROS robot based on Android and Arduino, with IoT and IA educationals applications.
+AndruinoR2 is an educational, open and low-cost (35-40 €) ROS robot based on Android and Arduino, with IoT and IA applications.
 
 More information on the wiki
 
