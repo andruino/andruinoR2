@@ -1,7 +1,7 @@
 # andruinoR2. 
 
-Robot móvil de bajo coste basado en móvil Android y placa Arduino, integrado en ROS y en IoT
+AndruinoR2 is an educational, open and low-cost (35-40 €) ROS robot based on Android and Arduino, with IoT and IA educationals applications.
 
-Paco Lópéz dirigido por Federico Cuesta. Todo el proyecto Andruino está bajo licencia Creative Commons Atribución-CompartirIgual 	(CC BY-SA)
+More information on the wiki
 
 Andruino project is under Creative Commons Attribution-ShareAlike (CC BY-SA)
