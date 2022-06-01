@@ -1,0 +1,17 @@
+void motorDchPWM(int PWMAvance, int PWMRetroceso);
+void motorIzqPWM(int PWMAvance, int PWMRetroceso);
+void pararMotores();
+int motoresPWM(int motor_izquierdo, int motor_derecho);
+float cmd_omegaDer(float cmd_vel, float cmd_ang);
+float cmd_omegaIzq(float cmd_vel, float cmd_ang);
+int cmd_PWMDer(float omegaDer);
+int cmd_PWMIzq(float omegaIzq);
+int movimiento_arco(int PWM_I, int PWM_D);
+int movimiento_linea_recta(int PWM_I, int PWM_D);
+int inicia_arco();
+int inicia_linea_recta();
+int movimiento_giro();
+int inicia_giro(float azimutGira);
+int pd();
+int pid_arco();
+int pid();
