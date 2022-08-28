@@ -1,1 +1,1 @@
-Archivos  URDF ypara simulación en Gazebo creados por Estefanía Tenorio, en proyecto dirigido por Federico Cuesta, y con la modesta ayuda de Paco López
+Archivos  URDF y para simulación en Gazebo creados por Estefanía Tenorio para su proyecto final de carrera. Proyecto final de carrera dirigido por Federico Cuesta, para el desarrollo de discho trabajo contó con alguna modesta ayuda de Paco López.
