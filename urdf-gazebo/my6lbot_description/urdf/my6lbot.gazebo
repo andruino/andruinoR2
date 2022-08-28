@@ -1,0 +1,226 @@
+<?xml version="1.0" ?>
+
+<robot name="my6lbot" xmlns:xacro="http://www.ros.org/wiki/xacro"> 
+<xacro:include filename="$(find my6lbot_description)/urdf/my6lbot.xacro"/>
+
+<!-- Plugins -->
+
+<!-- Plugin diferencial para el movimiento de las 6 ruedas -->
+<gazebo>
+      <plugin name="diffdrive_plugin_multiwheel" filename="libdiffdrive_plugin_multi_wheel.so">
+        <alwaysOn>true</alwaysOn>
+        <updateRate>25.0</updateRate>
+        <leftJoints>rueda_eje_centro_izqda rueda_eje_izqda_abajo rueda_eje_izqda_arriba</leftJoints>
+        <rightJoints>rueda_eje_centro_drcha rueda_eje_drcha_arriba rueda_eje_drcha_abajo</rightJoints>
+        <wheelSeparation>1</wheelSeparation>
+        <wheelDiameter>0.35</wheelDiameter>
+        <torque>50000</torque>
+        <robotNamespace>/</robotNamespace>
+        <robotBaseFrame>base_link</robotBaseFrame>
+	<odometryFrame>odom</odometryFrame>
+        <commandTopic>cmd_vel</commandTopic>
+	<odometryTopic>/odom</odometryTopic>
+        <publishOdometryTf>0</publishOdometryTf>
+        <publishOdometryMsg>1</publishOdometryMsg>
+      </plugin>
+</gazebo>
+
+
+
+<!-- Plugin Cámara Kinect-->
+
+<gazebo reference="camera_link">
+    <sensor type="depth" name="camera">
+      <pose>$(arg r200_cam_rgb_px) $(arg r200_cam_rgb_py) $(arg r200_cam_rgb_pz) 0 0 0</pose>
+      <always_on>true</always_on>
+      <!--<visualize>$(arg camera_visual)</visualize>-->
+      <visualize>0</visualize>
+      <camera>
+          <horizontal_fov>1.02974</horizontal_fov>
+          <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+          </image>
+          <depth_camera></depth_camera>
+          <clip>
+              <near>0.02</near>
+              <far>300</far>
+          </clip>
+      </camera>
+      <plugin name="camera_controller" filename="libgazebo_ros_openni_kinect.so">
+        <pose>$(arg r200_cam_depth_offset) 0 0 0 0 0</pose>
+        <alwaysOn>true</alwaysOn>
+            <updateRate>30.0</updateRate>
+            <cameraName>andruinoXXX/camera</cameraName>
+            <frameName>camera_link</frameName>
+        <imageTopicName>image</imageTopicName>
+        <depthImageTopicName>depth/image</depthImageTopicName>
+        <pointCloudTopicName>depth/points</pointCloudTopicName>
+        <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+        <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+        <pointCloudCutoff>0.4</pointCloudCutoff>
+            <hackBaseline>0.07</hackBaseline>
+            <distortionK1>0.0</distortionK1>
+            <distortionK2>0.0</distortionK2>
+            <distortionK3>0.0</distortionK3>
+            <distortionT1>0.0</distortionT1>
+            <distortionT2>0.0</distortionT2>
+        <CxPrime>0.0</CxPrime>
+        <Cx>0.0</Cx>
+        <Cy>0.0</Cy>
+        <focalLength>0.0</focalLength>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+
+
+<!-- Plugins para los sersores ultrasonido -->
+
+ <!-- Plugin Sensor Izquierda -->
+<gazebo reference="hc_sr04_1">
+      <sensor type="ray" name="hc_sr04_1">
+	  <pose>-1.5708 -1.5708 -1.5708 0 0 0</pose>
+	  <visualize>true</visualize>
+	  <update_rate>30</update_rate>
+	<ray>
+          <scan>
+            <horizontal>
+      	      <samples>32</samples>
+      	      <resolution>1</resolution>
+      	      <min_angle>-0.785398</min_angle>
+      	      <max_angle>0.785398</max_angle>
+            </horizontal>
+	 <!--   <vertical>
+              <samples>5</samples>
+              <resolution>1</resolution>
+              <min_angle>-16</min_angle>
+      	      <max_angle>16</max_angle>
+            </vertical>-->
+          </scan>
+          <range>
+            <min>0.05</min>
+            <max>7</max>
+            <resolution>0.02</resolution>
+          </range>
+	  <noise>
+            <mean>0.0</mean>
+            <stddev>0.02</stddev>
+          </noise>
+	</ray>
+	<plugin name="hc_sr04_1_plugin" filename="libgazebo_ros_range.so">
+	  <gaussianNoise>0.005</gaussianNoise>
+	  <always_on>true</always_on>
+	  <update_rate>30</update_rate>
+          <topicName>andruinoXXX/hc_sr04_1</topicName>
+          <frameName>hc_sr04_1</frameName>
+	  <frameId>hc_sr04_1</frameId>
+	  <fov>32</fov>
+	  <radiation>ultrasound</radiation>
+	</plugin>
+      </sensor>
+</gazebo>
+
+
+ <!-- Plugin Sensor Derecha-->
+<gazebo reference="hc_sr04_3">
+      <sensor type="ray" name="hc_sr04_3">
+	  <pose>0 0 0 0 0 1.5708</pose>
+	  <visualize>true</visualize>
+	  <update_rate>30</update_rate>
+	<ray>
+          <scan>
+            <horizontal>
+      	      <samples>32</samples>
+      	      <resolution>1</resolution>
+      	      <min_angle>-0.785398</min_angle>
+      	      <max_angle>0.785398</max_angle>
+            </horizontal>
+	 <!--   <vertical>
+              <samples>5</samples>
+              <resolution>1</resolution>
+              <min_angle>-16</min_angle>
+      	      <max_angle>16</max_angle>
+            </vertical>-->
+          </scan>
+          <range>
+            <min>0.05</min>
+            <max>7</max>
+            <resolution>0.02</resolution>
+          </range>
+	</ray>
+	<plugin name="hc_sr04_3_plugin" filename="libgazebo_ros_range.so">
+	  <gaussianNoise>0.005</gaussianNoise>
+	  <always_on>true</always_on>
+	  <update_rate>30</update_rate>
+          <topicName>andruinoXXX/hc_sr04_3</topicName>
+          <frameName>hc_sr04_3</frameName>
+	  <frameId>hc_sr04_3</frameId>
+	  <fov>32</fov>
+	  <radiation>ultrasound</radiation>
+	</plugin>
+      </sensor>
+</gazebo>
+
+
+<!-- Plugin Sensor Central -->
+ <gazebo reference="hc_sr04_2">
+      <sensor type="ray" name="hc_sr04_2">
+	  <pose>0 0 0 0 0 0</pose>
+	  <update_rate>30</update_rate>
+	  <visualize>true</visualize>
+	<ray>
+          <scan>
+            <horizontal>
+      	      <samples>32</samples>
+      	      <resolution>1</resolution>
+      	      <min_angle>-0.785398</min_angle>
+      	      <max_angle>0.785398</max_angle>
+            </horizontal>
+	   <!-- <vertical>
+              <samples>32</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.436332</min_angle>
+      	      <max_angle>0.436332</max_angle>
+            </vertical>-->
+          </scan>
+          <range>
+            <min>0.05</min>
+            <max>7</max>
+            <resolution>0.02</resolution>
+          </range>
+	</ray>
+	<plugin name="hc_sr04_2_plugin" filename="libgazebo_ros_range.so">
+	  <gaussianNoise>0.005</gaussianNoise>
+	  <always_on>true</always_on>
+	  <update_rate>30</update_rate>
+          <topicName>andruinoXXX/hc_sr04_2</topicName>
+          <frameName>hc_sr04_2</frameName>
+	  <frameId>hc_sr04_2</frameId>
+	  <fov>32</fov>
+	  <radiation>ultrasound</radiation>
+	</plugin>
+      </sensor>
+</gazebo>
+
+
+
+<!-- IMU Sensor -->
+
+<gazebo>
+    <plugin name="gazebo_ros_imu_controller" filename="libhector_gazebo_ros_imu.so">
+      <turnGravityOff>false</turnGravityOff>
+      <alwaysOn>true</alwaysOn>
+      <bodyName>IMU_link</bodyName>
+      <frameName>IMU_link</frameName>
+      <frameId>IMU_link</frameId>
+      <topicName>andruinoXXX/imu</topicName>
+      <serviceName>imu_service</serviceName>
+      <gaussianNoise>0.0</gaussianNoise>
+      <rpyOffsets>0 0 0</rpyOffsets>
+      <updateRate>30.0</updateRate>
+    </plugin>
+</gazebo>
+
+</robot>

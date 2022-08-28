@@ -1,0 +1,6 @@
+<launch>
+  <param name="/use_sim_time" value="true" />
+
+  <!-- include my6lbot -->
+  <include file="$(find gazebo_multi_robot)/launch/my6lbot.launch"/>
+</launch>

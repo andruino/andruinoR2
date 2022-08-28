@@ -1,0 +1,11 @@
+<launch>
+     <arg name="model" default="$(find my6lbot_description)/urdf/my6lbot.urdf"/>
+     <arg name="gui" default="true" />
+     <param name="robot_description" textfile="$(arg model)"/>
+     <param name="use_gui" value="$(arg gui)"/>     
+     <!-- <node name="robot_odometry_publisher" pkg="robot_odometry_publisher" type="odometry_publisher" /> -->
+     <!--<node name="odometry_publisher" pkg="my6lbot" type="odometry_publisher" />-->
+     <node name="odometry_publisher" pkg="gazebo_follower" type="odometry_publisher"/>
+    </launch>
+
+

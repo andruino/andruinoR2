@@ -1,0 +1,119 @@
+digraph G {
+node [shape=box];
+"odom" [label="odom"];
+"base_link" [label="base_link"];
+"IMU_link" [label="IMU_link"];
+"pata_drcha_abajo" [label="pata_drcha_abajo"];
+"eje_drcha_abajo" [label="eje_drcha_abajo"];
+"engranaje_drcha_abajo" [label="engranaje_drcha_abajo"];
+"rueda_drcha_abajo" [label="rueda_drcha_abajo"];
+"pata_drcha_arriba" [label="pata_drcha_arriba"];
+"eje_drcha_arriba" [label="eje_drcha_arriba"];
+"engranaje_drcha_arriba" [label="engranaje_drcha_arriba"];
+"rueda_drcha_arriba" [label="rueda_drcha_arriba"];
+"pata_izqda_abajo" [label="pata_izqda_abajo"];
+"eje_izqda_abajo" [label="eje_izqda_abajo"];
+"engranaje_izqda_abajo" [label="engranaje_izqda_abajo"];
+"rueda_izqda_abajo" [label="rueda_izqda_abajo"];
+"pata_izqda_arriba" [label="pata_izqda_arriba"];
+"eje_izqda_arriba" [label="eje_izqda_arriba"];
+"engranaje_izqda_arriba" [label="engranaje_izqda_arriba"];
+"rueda_izqda_arriba" [label="rueda_izqda_arriba"];
+"pata_larga_drcha_abajo" [label="pata_larga_drcha_abajo"];
+"pata_larga_drcha_arriba" [label="pata_larga_drcha_arriba"];
+"pata_larga_izqda_abajo" [label="pata_larga_izqda_abajo"];
+"pata_larga_izqda_arriba" [label="pata_larga_izqda_arriba"];
+"pata_cuad_centro_drcha" [label="pata_cuad_centro_drcha"];
+"eje_centro_drcha" [label="eje_centro_drcha"];
+"rueda_centro_drcha" [label="rueda_centro_drcha"];
+"pata_cuad_centro_drcha_tras" [label="pata_cuad_centro_drcha_tras"];
+"pata_cuad_centro_izqda" [label="pata_cuad_centro_izqda"];
+"eje_centro_izqda" [label="eje_centro_izqda"];
+"rueda_centro_izqda" [label="rueda_centro_izqda"];
+"pata_cuad_centro_izqda_tras" [label="pata_cuad_centro_izqda_tras"];
+"plataforma" [label="plataforma"];
+"movil" [label="movil"];
+"camera_link" [label="camera_link"];
+"arduino" [label="arduino"];
+"control_motores" [label="control_motores"];
+"hc_sr04_3" [label="hc_sr04_3"];
+"hc_sr04_2" [label="hc_sr04_2"];
+"hc_sr04_1" [label="hc_sr04_1"];
+node [shape=ellipse, color=blue, fontcolor=blue];
+"odom" -> "odom_base_link" [label="xyz: 0 0 0 \nrpy: 0 -0 0"]
+"odom_base_link" -> "base_link"
+"base_link" -> "IMU_joint" [label="xyz: 0 0 0.39 \nrpy: 0 -0 0"]
+"IMU_joint" -> "IMU_link"
+"base_link" -> "drcha_abajo" [label="xyz: 0.32 0.27 0.38 \nrpy: 0 0 -0.349066"]
+"drcha_abajo" -> "pata_drcha_abajo"
+"pata_drcha_abajo" -> "eje_pata_drcha_abajo" [label="xyz: 0 0 -0.245 \nrpy: 0 -0 0"]
+"eje_pata_drcha_abajo" -> "eje_drcha_abajo"
+"eje_drcha_abajo" -> "engranaje_eje_drcha_abajo" [label="xyz: 0 -0.025 0 \nrpy: 0 -0 0"]
+"engranaje_eje_drcha_abajo" -> "engranaje_drcha_abajo"
+"eje_drcha_abajo" -> "rueda_eje_drcha_abajo" [label="xyz: 0 0.25 0 \nrpy: 0 -0 0"]
+"rueda_eje_drcha_abajo" -> "rueda_drcha_abajo"
+"base_link" -> "drcha_arriba" [label="xyz: -0.32 0.27 0.38 \nrpy: 0 -0 0.349066"]
+"drcha_arriba" -> "pata_drcha_arriba"
+"pata_drcha_arriba" -> "eje_pata_drcha_arriba" [label="xyz: 0 0 -0.245 \nrpy: 0 -0 0"]
+"eje_pata_drcha_arriba" -> "eje_drcha_arriba"
+"eje_drcha_arriba" -> "engranaje_eje_drcha_arriba" [label="xyz: 0 -0.025 0 \nrpy: 0 -0 0"]
+"engranaje_eje_drcha_arriba" -> "engranaje_drcha_arriba"
+"eje_drcha_arriba" -> "rueda_eje_drcha_arriba" [label="xyz: 0 0.25 0 \nrpy: 0 -0 0"]
+"rueda_eje_drcha_arriba" -> "rueda_drcha_arriba"
+"base_link" -> "izqda_abajo" [label="xyz: 0.32 -0.27 0.38 \nrpy: 0 -0 0.349066"]
+"izqda_abajo" -> "pata_izqda_abajo"
+"pata_izqda_abajo" -> "eje_pata_izqda_abajo" [label="xyz: 0 0 -0.245 \nrpy: 0 -0 0"]
+"eje_pata_izqda_abajo" -> "eje_izqda_abajo"
+"eje_izqda_abajo" -> "engranaje_eje_izqda_abajo" [label="xyz: 0 0.025 0 \nrpy: 0 -0 0"]
+"engranaje_eje_izqda_abajo" -> "engranaje_izqda_abajo"
+"eje_izqda_abajo" -> "rueda_eje_izqda_abajo" [label="xyz: 0 -0.25 0 \nrpy: 0 -0 0"]
+"rueda_eje_izqda_abajo" -> "rueda_izqda_abajo"
+"base_link" -> "izqda_arriba" [label="xyz: -0.32 -0.27 0.38 \nrpy: 0 0 -0.349066"]
+"izqda_arriba" -> "pata_izqda_arriba"
+"pata_izqda_arriba" -> "eje_pata_izqda_arriba" [label="xyz: 0 0 -0.245 \nrpy: 0 -0 0"]
+"eje_pata_izqda_arriba" -> "eje_izqda_arriba"
+"eje_izqda_arriba" -> "engranaje_eje_izqda_arriba" [label="xyz: 0 0.025 0 \nrpy: 0 -0 0"]
+"engranaje_eje_izqda_arriba" -> "engranaje_izqda_arriba"
+"eje_izqda_arriba" -> "rueda_eje_izqda_arriba" [label="xyz: 0 -0.25 0 \nrpy: 0 -0 0"]
+"rueda_eje_izqda_arriba" -> "rueda_izqda_arriba"
+"base_link" -> "larga_drcha_abajo" [label="xyz: 0.32 0.2 0.38 \nrpy: 0 0 -0.349066"]
+"larga_drcha_abajo" -> "pata_larga_drcha_abajo"
+"base_link" -> "larga_drcha_arriba" [label="xyz: -0.32 0.2 0.38 \nrpy: 0 -0 0.349066"]
+"larga_drcha_arriba" -> "pata_larga_drcha_arriba"
+"base_link" -> "larga_izqda_abajo" [label="xyz: 0.32 -0.2 0.38 \nrpy: 0 -0 0.349066"]
+"larga_izqda_abajo" -> "pata_larga_izqda_abajo"
+"base_link" -> "larga_izqda_arriba" [label="xyz: -0.32 -0.2 0.38 \nrpy: 0 0 -0.349066"]
+"larga_izqda_arriba" -> "pata_larga_izqda_arriba"
+"base_link" -> "pata_centro_drcha" [label="xyz: 0 0.34 0.38 \nrpy: 0 -0 0"]
+"pata_centro_drcha" -> "pata_cuad_centro_drcha"
+"pata_cuad_centro_drcha" -> "eje_pata_centro_drcha" [label="xyz: 0 0 -0.245 \nrpy: 0 -0 0"]
+"eje_pata_centro_drcha" -> "eje_centro_drcha"
+"eje_centro_drcha" -> "rueda_eje_centro_drcha" [label="xyz: 0 0.2 0 \nrpy: 0 -0 0"]
+"rueda_eje_centro_drcha" -> "rueda_centro_drcha"
+"base_link" -> "pata_centro_drcha_tras" [label="xyz: 0 0.19 0.38 \nrpy: 0 -0 0"]
+"pata_centro_drcha_tras" -> "pata_cuad_centro_drcha_tras"
+"base_link" -> "pata_centro_izqda" [label="xyz: 0 -0.34 0.38 \nrpy: 0 -0 0"]
+"pata_centro_izqda" -> "pata_cuad_centro_izqda"
+"pata_cuad_centro_izqda" -> "eje_pata_centro_izqda" [label="xyz: 0 0 -0.245 \nrpy: 0 -0 0"]
+"eje_pata_centro_izqda" -> "eje_centro_izqda"
+"eje_centro_izqda" -> "rueda_eje_centro_izqda" [label="xyz: 0 -0.2 0 \nrpy: 0 -0 0"]
+"rueda_eje_centro_izqda" -> "rueda_centro_izqda"
+"base_link" -> "pata_centro_izqda_tras" [label="xyz: 0 -0.19 0.38 \nrpy: 0 -0 0"]
+"pata_centro_izqda_tras" -> "pata_cuad_centro_izqda_tras"
+"base_link" -> "plataforma_base" [label="xyz: 0 0 0.475 \nrpy: 0 -0 0"]
+"plataforma_base" -> "plataforma"
+"plataforma" -> "movil_plataforma" [label="xyz: -0.265 0 0.375 \nrpy: 0 -0 0"]
+"movil_plataforma" -> "movil"
+"movil" -> "camera_movil" [label="xyz: 0.025 0.62 0.24 \nrpy: 0 -0 0"]
+"camera_movil" -> "camera_link"
+"plataforma" -> "placa_arduino_plataforma" [label="xyz: 0 0 0.03 \nrpy: 0 -0 0"]
+"placa_arduino_plataforma" -> "arduino"
+"arduino" -> "control_motores_arduino" [label="xyz: 0 0 0.113 \nrpy: 0 -0 0"]
+"control_motores_arduino" -> "control_motores"
+"control_motores" -> "sensor_drcha" [label="xyz: 0 0.29 0.15 \nrpy: 0 -0 0.785398"]
+"sensor_drcha" -> "hc_sr04_3"
+"control_motores" -> "sensor_frontal" [label="xyz: 0.21 0 0.15 \nrpy: 0 -0 0"]
+"sensor_frontal" -> "hc_sr04_2"
+"control_motores" -> "sensor_izqda" [label="xyz: 0 -0.29 0.15 \nrpy: 0 0 -0.785398"]
+"sensor_izqda" -> "hc_sr04_1"
+}

@@ -1,0 +1,1387 @@
+<?xml version="1.0"?>
+
+<robot name="my6lbot"> 
+
+<!--<arg name="r200_cam_rgb_px" default="0.005"/>
+<arg name="r200_cam_rgb_py" default="0.018"/>
+<arg name="r200_cam_rgb_pz" default="0.013"/>
+<arg name="r200_cam_depth_offset" default="0.01"/>-->
+
+<!--<arg name="camera_visual" default="false"/>-->
+
+<!-- Descripción de la infraestructura del robot, my6lbot -->
+
+<!-- Link odom -->
+<link name="odom"/>
+
+<!-- Joint entre Odom y Base_link -->
+<joint name="odom_base_link" type="fixed"> 
+    <parent link="odom"/>
+    <child link="base_link"/>
+</joint>
+
+
+<!-- Base del robot, my6lbot -->
+<link name="base_link">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0.41"/> 
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/base.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.41"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_base.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.001408 0.005949 0.466723"/> 
+      <mass value="0.0252004"/>
+	<inertia ixx="0.001373556" ixy="0.000000974" ixz="-0.000000008" iyy="0.000990376" iyz="0.000000003" izz="0.002353434"/>
+    </inertial>
+</link>
+
+
+<!-- Estructura de patas cuadradas bajo la base, patas centrales -->
+
+<!-- Pata cuadrada centro izquierda -->
+<link name="pata_cuad_centro_izqda">
+    <visual>
+     <origin rpy="0 -1.5708 1.5708" xyz="0 -0.03 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_cuadrada_centro_izqda.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 -0.03 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_cuadrada.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.131695 -0.022760 -0.025368"/>
+      <mass value="0.000011341"/> 
+      <inertia ixx="0.000000155" ixy="-0.000000026" ixz="-0.000000005" iyy="0.000000099" iyz="-0.000000001" izz="0.000000250"/>
+    </inertial>
+</link>
+
+<!-- Joint pata cuadrada centro izquierda con base -->
+<joint name="pata_centro_izqda" type="fixed">
+       <origin xyz="0 -0.34 0.38" rpy="0 0 0"/>     
+	<parent link="base_link"/>
+        <child link="pata_cuad_centro_izqda"/>
+</joint> 
+
+<!-- Pata cuadrada centro izquierda trasera -->
+<link name="pata_cuad_centro_izqda_tras">
+    <visual>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 -0.03 0"/> 
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_cuadrada_trasera_izqda.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 -0.03 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_cuadrada_trasera.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.131672 -0.016797 -0.019444"/> 
+      <mass value="0.000011329"/>
+      <inertia ixx="0.000000156" ixy="-0.000000028" ixz="-0.000000008" iyy="0.000000102" iyz="-0.000000002" izz="0.000000250"/>
+    </inertial>
+</link>
+
+<!-- Joint pata cuadrada centro izquierda trasera con base -->
+<joint name="pata_centro_izqda_tras" type="fixed">
+        <origin xyz="0 -0.19 0.38" rpy="0 0 0"/>
+        <parent link="base_link"/>
+        <child link="pata_cuad_centro_izqda_tras"/>
+</joint> 
+
+
+<!-- Pata cuadrada centro derecha --> 
+<link name="pata_cuad_centro_drcha">
+    <visual>
+      <origin rpy="0 -1.5708 -1.5708" xyz="0 0.03 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_cuadrada_centro_drcha.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 -1.5708" xyz="0 0.03 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_cuadrada.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.131695 -0.022760 -0.025368"/> 
+	<mass value="0.000011341"/> 
+      <inertia ixx="0.000000155" ixy="-0.000000026" ixz="-0.000000005" iyy="0.000000099" iyz="-0.000000001" izz="0.000000250"/>
+    </inertial>
+</link> 
+
+<!-- Joint pata cuadrada centro derecha con base -->
+<joint name="pata_centro_drcha" type="fixed">
+        <origin xyz="0 0.34 0.38" rpy="0 0 0"/> 
+        <parent link="base_link"/>
+        <child link="pata_cuad_centro_drcha"/>
+</joint> 
+
+
+<!-- Pata cuadrada centro derecha trasera -->
+<link name="pata_cuad_centro_drcha_tras">
+    <visual>
+      <origin rpy="0 -1.5708 -1.5708" xyz="0 0.03 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_cuadrada_trasera_drcha.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 -1.5708" xyz="0 0.03 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_cuadrada_trasera.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.131672 -0.016797 -0.019444"/>
+      <mass value="0.000011329"/>
+      <inertia ixx="0.000000156" ixy="-0.000000028" ixz="-0.000000008" iyy="0.000000102" iyz="-0.000000002" izz="0.000000250"/>
+    </inertial>
+</link> 
+
+
+<!-- Joint pata cuadrada centro derecha trasera con base -->
+<joint name="pata_centro_drcha_tras" type="fixed">
+        <origin xyz="0 0.19 0.38" rpy="0 0 0"/>
+        <parent link="base_link"/>
+        <child link="pata_cuad_centro_drcha_tras"/>
+</joint> 
+
+
+
+<!-- Estructura de las patas que se encuentran en las esquinas -->
+
+<!-- Esquina izquierda arriba (mirando el robot de frente) -->
+<!-- Pata corta -->
+<link name="pata_izqda_arriba">
+    <visual>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 0 -0.055"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_corta.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 0 -0.055"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_corta.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+	<origin rpy="0 0 0" xyz="0.1076660 -0.0000496 0.0573439"/>
+   	<mass value="0.000030204"/>
+     <inertia ixx="0.000000062" ixy="-0.000000034" ixz="0.000000516" iyy="0.000000772" iyz="0.000000000" izz="0.000000710"/>
+    </inertial>
+</link>
+
+<!-- Joint pata corta izquierda arriba con base -->
+<joint name="izqda_arriba" type="fixed">
+        <origin xyz="-0.32 -0.27 0.38" rpy="0 0 -0.349066"/>
+        <parent link="base_link"/>
+        <child link="pata_izqda_arriba"/>
+</joint> 
+
+
+<!-- Pata larga -->
+<link name="pata_larga_izqda_arriba">
+    <visual>
+      <origin rpy="0 1.5708 1.5708" xyz="0.01 0 -0.2"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_larga_izqda.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 1.5708" xyz="0.01 0 -0.2"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_larga_izqda.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.033181 0.001102 0.008191"/> 
+      <mass value="0.000170937"/>
+      <inertia ixx="0.000000285" ixy="-0.000000566" ixz="-0.000000404" iyy="0.000002178" iyz="-0.000000106" izz="0.000001977"/>
+    </inertial>
+</link> 
+
+<!-- Joint pata larga izquierda arriba con base -->
+<joint name="larga_izqda_arriba" type="fixed"> 
+        <origin xyz="-0.32 -0.2 0.38" rpy="0 0 -0.349066"/> 
+        <parent link="base_link"/>
+        <child link="pata_larga_izqda_arriba"/>
+</joint> 
+
+
+
+<!-- Equina izquierda abajo (mirando el robot de frente) -->
+<!-- Pata corta -->
+<link name="pata_izqda_abajo">
+    <visual>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 0 -0.055"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_corta.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 0 -0.055"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_corta.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+	<origin rpy="0 0 0" xyz="0.1076660 -0.0000496 0.0573439"/>
+   	<mass value="0.000030204"/>
+     <inertia ixx="0.000000062" ixy="-0.000000034" ixz="0.000000516" iyy="0.000000772" iyz="0.000000000" izz="0.000000710"/>
+    </inertial>
+</link>  
+
+<!-- Joint pata corta izquierda abajo con base -->
+<joint name="izqda_abajo" type="fixed">
+        <origin xyz="0.32 -0.27 0.38" rpy="0 0 0.349066"/> 
+        <parent link="base_link"/>
+        <child link="pata_izqda_abajo"/>
+</joint>  
+
+
+<!-- Pata larga -->
+<link name="pata_larga_izqda_abajo">
+    <visual>
+      <origin rpy="0 -1.5708 -1.5708" xyz="-0.01 0 -0.2"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_larga_drcha.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 -1.5708" xyz="-0.01 0 -0.2"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_larga_drcha.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.033181 0.001102 0.008191"/>
+      <mass value="0.000170937"/>
+      <inertia ixx="0.000000285" ixy="-0.000000566" ixz="-0.000000404" iyy="0.000002178" iyz="-0.000000106" izz="0.000001977"/>
+    </inertial>
+</link> 
+
+<!-- Joint pata larga izquierda abajo con base -->
+<joint name="larga_izqda_abajo" type="fixed">
+        <origin xyz="0.32 -0.2 0.38" rpy="0 0 0.349066"/> 
+        <parent link="base_link"/>
+        <child link="pata_larga_izqda_abajo"/>
+</joint> 
+
+
+
+<!-- Esquina derecha arriba (mirando el robot de frente) -->
+<!-- Pata corta -->
+<link name="pata_drcha_arriba">
+    <visual>
+      <origin rpy="0 -1.5708 -1.5708" xyz="0 0 -0.055"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_corta.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 -1.5708" xyz="0 0 -0.055"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_corta.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+	<origin rpy="0 0 0" xyz="0.1076660 -0.0000496 0.0573439"/>
+   	<mass value="0.000030204"/>
+     <inertia ixx="0.000000062" ixy="-0.000000034" ixz="0.000000516" iyy="0.000000772" iyz="0.000000000" izz="0.000000710"/>
+    </inertial>
+</link> 
+
+<!-- Joint pata corta derecha arriba con base -->
+<joint name="drcha_arriba" type="fixed">
+        <origin xyz="-0.32 0.27 0.38" rpy="0 0 0.349066"/>
+        <parent link="base_link"/>
+        <child link="pata_drcha_arriba"/>
+</joint> 
+
+
+<!-- Pata larga -->
+<link name="pata_larga_drcha_arriba">
+    <visual>
+      <origin rpy="0 -1.5708 1.5708" xyz="0.01 0 -0.2"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_larga_drcha.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 1.5708" xyz="0.01 0 -0.2"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_larga_drcha.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.033181 0.001102 0.008191"/> 
+      <mass value="0.000170937"/>
+      <inertia ixx="0.000000285" ixy="-0.000000566" ixz="-0.000000404" iyy="0.000002178" iyz="-0.000000106" izz="0.000001977"/>
+    </inertial>
+</link> 
+
+<!-- Joint pata larga derecha arriba con base -->
+<joint name="larga_drcha_arriba" type="fixed">
+        <origin xyz="-0.32 0.2 0.38" rpy="0 0 0.349066"/>
+        <parent link="base_link"/>
+        <child link="pata_larga_drcha_arriba"/>
+</joint> 
+
+
+
+<!-- Esquina derecha abajo (mirando el robot de frente) -->
+<!-- Pata corta -->
+<link name="pata_drcha_abajo">
+    <visual>
+      <origin rpy="0 -1.5708 -1.5708" xyz="0 0 -0.055"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_corta.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 -1.5708" xyz="0 0 -0.055"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_corta.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+	<origin rpy="0 0 0" xyz="0.1076660 -0.0000496 0.0573439"/>
+   	<mass value="0.000030204"/>
+     <inertia ixx="0.000000062" ixy="-0.000000034" ixz="0.000000516" iyy="0.000000772" iyz="0.000000000" izz="0.000000710"/>
+    </inertial>
+</link>  
+
+<!-- Joint pata corta derecha abajo con base -->
+<joint name="drcha_abajo" type="fixed">
+        <origin xyz="0.32 0.27 0.38" rpy="0 0 -0.349066"/>
+        <parent link="base_link"/>
+        <child link="pata_drcha_abajo"/>
+</joint> 
+
+
+<!-- Pata larga -->
+<link name="pata_larga_drcha_abajo">
+    <visual>
+      <origin rpy="0 1.5708 -1.5708" xyz="-0.01 0 -0.2"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/pata_larga_izqda.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 -1.5708" xyz="-0.01 0 -0.2"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_pata_larga_izqda.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="-0.033181 0.001102 0.008191"/>
+      <mass value="0.000170937"/>
+      <inertia ixx="0.000000285" ixy="-0.000000566" ixz="-0.000000404" iyy="0.000002178" iyz="-0.000000106" izz="0.000001977"/>
+    </inertial>
+</link> 
+
+<!-- Joint pata larga derecha abajo con base -->
+<joint name="larga_drcha_abajo" type="fixed">
+        <origin xyz="0.32 0.2 0.38" rpy="0 0 -0.349066"/>
+        <parent link="base_link"/>
+        <child link="pata_larga_drcha_abajo"/>
+</joint>  
+
+
+
+
+<!-- Ejes y ruedas del robot, my6lbot -->
+
+<!-- Centrales -->
+<!-- Eje centro izquierda -->
+<link name="eje_centro_izqda">
+    <visual>
+      <origin rpy="1.5708 0 0" xyz="0 -0.04 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/eje.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="1.5708 0 0" xyz="0 -0.04 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_eje.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/> 
+	<mass value="0.00056233"/>
+      <inertia ixx="0.000007530" ixy="0" ixz="-0" iyy="0.000007530" iyz="0" izz="0.000000063"/>
+    </inertial>
+</link> 
+
+<!-- Joint eje con pata centro izquierda --> 
+<joint name="eje_pata_centro_izqda" type="fixed">
+    <parent link="pata_cuad_centro_izqda"/>
+    <child link="eje_centro_izqda"/>
+    <origin xyz="0 0 -0.245" rpy="0 0 0"/>
+</joint>
+
+
+<!-- Rueda centro izquierda -->
+<link name="rueda_centro_izqda">
+    <visual>
+      <origin rpy="3.14159 3.14159 0" xyz="0 -0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/rueda.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="3.14159 3.14159 0" xyz="0 -0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_rueda.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+    <origin rpy="0 0 0" xyz="0 -0.1 0"/> 
+	<mass value="0.001930063"/>
+      <inertia ixx="0.000022026" ixy="-0.000000134" ixz="0.000000006" iyy="0.000022416" iyz="0.000000194" izz="0.000021696"/>
+    </inertial>
+</link> 
+
+<!-- Joint rueda centro izquierda con eje -->
+ <joint name="rueda_eje_centro_izqda" type="continuous"> 
+    <axis xyz="0 1 0"/>
+    <parent link="eje_centro_izqda"/>
+    <child link="rueda_centro_izqda"/>
+    <origin xyz="0 -0.2 0" rpy="0 0 0"/>
+ </joint> 
+
+
+<!-- Eje centro derecha -->
+<link name="eje_centro_drcha">
+    <visual>
+      <origin rpy="1.5708 0 0" xyz="0 0.04 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/eje.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="1.5708 0 0" xyz="0 0.04 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_eje.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+     <origin rpy="0 0 0" xyz="0 0 0"/>
+	<mass value="0.00056233"/>
+      <inertia ixx="0.000007530" ixy="0" ixz="-0" iyy="0.000007530" iyz="0" izz="0.000000063"/>
+    </inertial>
+</link>
+
+
+<!-- Joint eje con pata centro derecha --> 
+<joint name="eje_pata_centro_drcha" type="fixed">
+    <parent link="pata_cuad_centro_drcha"/>
+    <child link="eje_centro_drcha"/>
+    <origin xyz="0 0 -0.245" rpy="0 0 0"/>
+</joint>
+
+
+<!-- Rueda centro derecha --> 
+<link name="rueda_centro_drcha">
+    <visual>
+	 <origin rpy="0 0 0" xyz="0 0.1 0"/> 
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/rueda.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_rueda.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+     <origin rpy="0 0 0" xyz="0 0.1 0"/> 
+	<mass value="0.001930063"/>
+      <inertia ixx="0.000022026" ixy="-0.000000134" ixz="0.000000006" iyy="0.000022416" iyz="0.000000194" izz="0.000021696"/>
+    </inertial>
+</link> 
+
+
+<!-- Joint rueda centro derecha con eje --> 
+<joint name="rueda_eje_centro_drcha" type="continuous">
+    <axis xyz="0 1 0"/>
+    <parent link="eje_centro_drcha"/>
+    <child link="rueda_centro_drcha"/>
+    <origin xyz="0 0.2 0" rpy="0 0 0"/>
+</joint>
+
+
+
+
+<!-- Lado Izquierdo -->
+<!-- Eje izquierda arriba -->
+<link name="eje_izqda_arriba">
+    <visual>
+      <origin rpy="0 1.5708 1.5708" xyz="0 -0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/eje.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 1.5708" xyz="0 -0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_eje.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+	<mass value="0.00056233"/>
+      <inertia ixx="0.000007530" ixy="0" ixz="-0" iyy="0.000007530" iyz="0" izz="0.000000063"/>
+    </inertial>
+</link>  
+
+
+<!-- Joint pata izquierda arriba con eje --> 
+<joint name="eje_pata_izqda_arriba" type="fixed"> 
+        <parent link="pata_izqda_arriba"/>
+        <child link="eje_izqda_arriba"/>
+	<origin xyz="0 0 -0.245" rpy="0 0 0"/> 
+</joint> 
+
+
+<!-- Rueda izquierda arriba -->
+<link name="rueda_izqda_arriba">
+    <visual>
+      <origin rpy="3.14159 3.14159 0" xyz="0 -0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/rueda.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="3.14159 3.14159 0" xyz="0 -0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_rueda.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+     <origin rpy="0 0 0" xyz="0 -0.1 0"/>
+	<mass value="0.001930063"/>
+      <inertia ixx="0.000022026" ixy="-0.000000134" ixz="0.000000006" iyy="0.000022416" iyz="0.000000194" izz="0.000021696"/>
+    </inertial>
+</link> 
+
+<!-- Joint rueda izquierda arriba con eje -->
+<joint name="rueda_eje_izqda_arriba" type="continuous">
+	<axis xyz="0 1 0"/>
+        <parent link="eje_izqda_arriba"/>
+        <child link="rueda_izqda_arriba"/>
+	<origin xyz="0 -0.25 0" rpy="0 0 0"/>
+</joint>
+
+
+<!-- Eje izquierda abajo -->
+<link name="eje_izqda_abajo">
+    <visual>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 -0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/eje.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 -0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_eje.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+	<mass value="0.00056233"/>
+      <inertia ixx="0.000007530" ixy="0" ixz="-0" iyy="0.000007530" iyz="0" izz="0.000000063"/>
+    </inertial>
+</link>  
+
+<!-- Joint pata izquierda abajo con eje --> 
+<joint name="eje_pata_izqda_abajo" type="fixed">
+	<origin xyz="0 0 -0.245" rpy="0 0 0"/>
+        <parent link="pata_izqda_abajo"/>
+        <child link="eje_izqda_abajo"/>
+</joint> 
+
+
+<!-- Rueda izquierda abajo -->
+<link name="rueda_izqda_abajo">
+    <visual>
+    <origin rpy="3.14159 3.14159 0" xyz="0 -0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/rueda.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="3.14159 3.14159 0" xyz="0 -0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_rueda.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+    <origin rpy="0 0 0" xyz="0 -0.1 0"/>
+	<mass value="0.001930063"/>
+      <inertia ixx="0.000022026" ixy="-0.000000134" ixz="0.000000006" iyy="0.000022416" iyz="0.000000194" izz="0.000021696"/>
+    </inertial>
+</link> 
+
+<!-- Joint rueda izquierda abajo con eje -->
+<joint name="rueda_eje_izqda_abajo" type="continuous">
+	<axis xyz="0 1 0"/>
+        <origin xyz="0 -0.25 0" rpy="0 0 0"/>
+        <parent link="eje_izqda_abajo"/>
+        <child link="rueda_izqda_abajo"/>
+</joint>  
+
+
+
+
+<!-- Lado Derecho -->
+<!-- Eje derecha arriba -->
+<link name="eje_drcha_arriba">
+    <visual>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/eje.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_eje.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+	<mass value="0.00056233"/>
+      <inertia ixx="0.000007530" ixy="0" ixz="-0" iyy="0.000007530" iyz="0" izz="0.000000063"/>
+    </inertial>
+</link>
+
+<!-- Joint eje derecha arriba con pata --> 
+<joint name="eje_pata_drcha_arriba" type="fixed">
+        <origin xyz="0 0 -0.245" rpy="0 0 0"/>
+        <parent link="pata_drcha_arriba"/>
+        <child link="eje_drcha_arriba"/>
+</joint>
+
+
+<!-- Rueda derecha arriba -->
+<link name="rueda_drcha_arriba">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/rueda.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_rueda.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+    <origin rpy="0 0 0" xyz="0 0.1 0"/>
+	<mass value="0.001930063"/>
+      <inertia ixx="0.000022026" ixy="-0.000000134" ixz="0.000000006" iyy="0.000022416" iyz="0.000000194" izz="0.000021696"/>
+    </inertial>
+</link> 
+
+<!-- Joint rueda derecha arriba con eje -->
+<joint name="rueda_eje_drcha_arriba" type="continuous">
+	<axis xyz="0 1 0"/>
+        <parent link="eje_drcha_arriba"/>
+        <child link="rueda_drcha_arriba"/>
+	<origin xyz="0 0.25 0" rpy="0 0 0"/> 
+</joint> 
+
+
+<!-- Eje derecha abajo --> 
+<link name="eje_drcha_abajo">
+    <visual>
+      <origin rpy="0 1.5708 -1.5708" xyz="0 0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/eje.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 -1.5708" xyz="0 0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_eje.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+	<mass value="0.00056233"/>
+      <inertia ixx="0.000007530" ixy="0" ixz="-0" iyy="0.000007530" iyz="0" izz="0.000000063"/>
+    </inertial>
+</link> 
+
+
+<!-- Joint eje derecha abajo con pata --> 
+<joint name="eje_pata_drcha_abajo" type="fixed">
+        <parent link="pata_drcha_abajo"/>
+        <child link="eje_drcha_abajo"/>
+	<origin xyz="0 0 -0.245" rpy="0 0 0"/>
+</joint> 
+
+
+<!-- Rueda derecha abajo  -->
+<link name="rueda_drcha_abajo">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/rueda.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.1 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_rueda.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+    <origin rpy="0 0 0" xyz="0 0.1 0"/>   
+	<mass value="0.001930063"/>
+      <inertia ixx="0.000022026" ixy="-0.000000134" ixz="0.000000006" iyy="0.000022416" iyz="0.000000194" izz="0.000021696"/>
+    </inertial>
+</link> 
+
+<!-- Joint rueda derecha abajo con eje -->
+<joint name="rueda_eje_drcha_abajo" type="continuous">
+	<axis xyz="0 1 0"/>
+        <parent link="eje_drcha_abajo"/>
+        <child link="rueda_drcha_abajo"/>
+	<origin xyz="0 0.25 0" rpy="0 0 0"/>
+</joint> 
+
+
+
+
+<!-- Engranajes de las 4 esquinas -->
+
+<!-- Engranaje izquierda arriba -->
+<link name="engranaje_izqda_arriba">
+    <visual>
+      <origin rpy="0 1.5708 1.5708" xyz="0 -0.01 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/engranaje_esquinas_naranja.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 1.5708" xyz="0 -0.01 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_engranaje_esquinas.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.00056233"/>
+      <inertia ixx="0.000007530" ixy="0" ixz="-0" iyy="0.000007530" iyz="0" izz="0.000000063"/>
+    </inertial>
+</link> 
+
+<!-- Joint engranaje izquierda arriba con eje izquierda arriba -->
+<joint name="engranaje_eje_izqda_arriba" type="fixed">
+	<origin xyz="0 0.025 0" rpy="0 0 0"/>
+        <parent link="eje_izqda_arriba"/>
+        <child link="engranaje_izqda_arriba"/>
+</joint> 
+
+
+<!-- Engranaje izquierda abajo -->
+<link name="engranaje_izqda_abajo">
+    <visual>
+      <origin rpy="0 -1.5708 -1.5708" xyz="0 -0.01 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/engranaje_esquinas_naranja.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 -1.5708" xyz="0 -0.01 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_engranaje_esquinas.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+	<mass value="0.00056233"/>
+      <inertia ixx="0.000007530" ixy="0" ixz="-0" iyy="0.000007530" iyz="0" izz="0.000000063"/>
+    </inertial>
+</link> 
+
+<!-- Joint engranaje izquierda abajo con eje izqda abajo -->
+<joint name="engranaje_eje_izqda_abajo" type="fixed">
+	<origin xyz="0 0.025 0" rpy="0 0 0"/>
+        <parent link="eje_izqda_abajo"/>
+        <child link="engranaje_izqda_abajo"/>
+</joint>
+
+
+<!-- Engranaje derecha arriba-->
+<link name="engranaje_drcha_arriba">
+    <visual>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 0.01 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/engranaje_esquinas_naranja.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 -1.5708 1.5708" xyz="0 0.01 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_engranaje_esquinas.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/> 
+	<mass value="0.00056233"/>
+      <inertia ixx="0.000007530" ixy="0" ixz="-0" iyy="0.000007530" iyz="0" izz="0.000000063"/>
+    </inertial>
+</link> 
+
+<!-- Joint engranaje derecha arriba con eje derecha arriba -->
+<joint name="engranaje_eje_drcha_arriba" type="fixed">
+	<origin xyz="0 -0.025 0" rpy="0 0 0"/>
+        <parent link="eje_drcha_arriba"/>
+        <child link="engranaje_drcha_arriba"/>
+</joint> 
+
+
+<!-- Engranaje derecha abajo -->
+<link name="engranaje_drcha_abajo">
+    <visual>
+      <origin rpy="0 1.5708 -1.5708" xyz="0.004 0.01 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/engranaje_esquinas_naranja.dae"/> 
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 -1.5708" xyz="0.004 0.01 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_engranaje_esquinas.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+	<mass value="0.00056233"/>
+      <inertia ixx="0.000007530" ixy="0" ixz="-0" iyy="0.000007530" iyz="0" izz="0.000000063"/>
+    </inertial>
+</link> 
+
+<!-- Joint 31: eje derecha abajo con engranaje derecha abajo -->
+<joint name="engranaje_eje_drcha_abajo" type="fixed"> 
+	<origin xyz="0 -0.025 0" rpy="0 0 0"/>
+        <parent link="eje_drcha_abajo"/>
+        <child link="engranaje_drcha_abajo"/>
+</joint> 
+
+
+
+
+<!-- Plataforma superior, colocada sobre la base, en la que ubicaremos el móvil, la placa de motores, la placa Arduino y los sensores -->
+  <link name="plataforma">
+    <visual>
+      <origin rpy="0 0 -1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/plataforma.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 -1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_plataforma.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+     <origin rpy="0 0 0" xyz="0.001326 -0.118987 0.144776"/>
+      <mass value="0.014841271"/>
+	<inertia ixx="0.005568011" ixy="-0.000000796" ixz="0.000206859" iyy="0.001531249" iyz="-0.000000757" izz="0.006758632"/> <!-- Intercambiamos xx e yy de los valores obtenidos-->
+    </inertial>
+  </link> 
+
+<!-- Joint plataforma superior con base  -->
+<joint name="plataforma_base" type="fixed">
+        <origin xyz="0 0 0.475" rpy="0 0 0"/>
+        <parent link="base_link"/>
+        <child link="plataforma"/>
+</joint> 
+
+
+
+<!-- Placa Arduino-->
+ <link name="arduino">
+    <visual>
+      <origin rpy="0 0 1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/arduino.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_arduino.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+	 <origin rpy="0 0 0" xyz="-0.032426 -0.040293 0.053334"/>
+       <mass value="0.048376644"/> 
+	<inertia ixx="0.002444384" ixy="0.000000000" ixz="-0.000000000" iyy="0.001236856" iyz="-0.000000000" izz="0.003572747"/> <!--intercambiamos xx e yy de los valores obtenidos -->
+   </inertial>
+</link>
+
+<!-- Joint placa arduino con plataforma -->
+<joint name="placa_arduino_plataforma" type="fixed">
+        <origin xyz="0 0 0.03" rpy="0 0 0"/>
+        <parent link="plataforma"/>
+        <child link="arduino"/>
+</joint> 
+
+
+
+<!-- Placa para el control de motores -->
+  <link name="control_motores">
+    <visual>
+      <origin rpy="0 0 0" xyz="0.02 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/placa_motores.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0.02 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_placa_motores.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+        <origin rpy="0 0 0" xyz="-0.000745 -0.000582 0.011053"/>
+	
+	<mass value="0.030402384"/>
+
+	<inertia ixx="0.000654234" ixy="0.000000000" ixz="-0.000000000" iyy="0.001260018" iyz="-0.000000000" izz="0.001905036"/> 
+	</inertial>
+</link>  
+
+<!-- Joint placa control motores con placa arduino -->
+<joint name="control_motores_arduino" type="fixed">
+        <origin xyz="0 0 0.113" rpy="0 0 0"/>
+	<parent link="arduino"/>
+        <child link="control_motores"/>
+</joint>  
+
+
+
+<!-- Móvil-->
+<link name="movil">
+    <visual>
+      <origin rpy="1.5708 3.14159 -1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/movil_sc.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="1.5708 3.14159 -1.5708" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_movil.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+	<origin rpy="0 0 0" xyz="0.265 0 -0.55"/>
+  	<mass value="0.068563110"/>
+	<inertia ixx="0.011219955" ixy="0.000005251" ixz="0.000000305" iyy="0.002826898" iyz="-0.000000732" izz="0.013990914"/> 
+    </inertial>
+</link> 
+
+<!-- Joint móvil con plataforma -->
+<joint name="movil_plataforma" type="fixed">
+        <origin xyz="-0.265 0 0.375" rpy="0 0 0"/>
+        <parent link="plataforma"/>
+        <child link="movil"/>
+</joint>
+
+
+<!-- Cámara del móvil -->
+<link name="camera_link">
+ <visual>
+      <origin rpy="0 1.5708 0" xyz="0 0.24 0.625"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/camera.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_camera.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+  	<origin rpy="0 0 0" xyz="0.619362 -0.243069 -0.014446"/>
+  	<mass value="0.000193369"/>
+	<inertia ixx="0.000000070" ixy="-0.000000000" ixz="-0.000000000" iyy="0.000000070" iyz="0.000000000" izz="0.000000060"/>
+    </inertial>
+</link> 
+
+<!-- Joint cámara con móvil -->
+<joint name="camera_movil" type="fixed">
+        <origin xyz="0.025 0.62 0.24" rpy="0 0 0"/>
+        <parent link="movil"/>
+        <child link="camera_link"/>
+</joint>
+
+
+
+
+<!-- Sensores -->
+
+<!-- Sensor frontal -->
+<link name="hc_sr04_2">
+    <visual>
+      <origin rpy="0 1.5708 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/sensor.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 0" xyz="-0.03 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_sensor.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+	<origin rpy="0 0 0" xyz="0.0264374 -0.0028550 0.2141432"/>    
+    <mass value="0.000627506"/>
+       <inertia ixx="0.000014895" ixy="-0.000000442" ixz="0.000003847" iyy="0.000016911" iyz="-0.000000146" izz="0.000005403"/>
+    </inertial>
+</link> 
+
+<!-- Joint sensor frontal con placa control de motores -->
+<joint name="sensor_frontal" type="fixed">
+        <origin xyz="0.21 0 0.15" rpy="0 0 0"/>
+        <parent link="control_motores"/>
+        <child link="hc_sr04_2"/>
+</joint>  
+
+
+<!-- Sensor derecha -->
+<link name="hc_sr04_3">
+    <visual>
+      <origin rpy="0 1.5708 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/sensor.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 0" xyz="-0.03 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_sensor.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+	<origin rpy="0 0 0" xyz="0.0264374 -0.0028550 0.2141432"/>
+	 <mass value="0.000627506"/>
+      <inertia ixx="0.000014895" ixy="-0.000000442" ixz="0.000003847" iyy="0.000016911" iyz="-0.000000146" izz="0.000005403"/> 	
+	</inertial>
+</link> 
+
+<!-- Joint sensor derecha con placa control de motores -->
+<joint name="sensor_drcha" type="fixed">
+	<origin xyz="0 0.29 0.15" rpy="0 0 0.785398"/>
+        <parent link="control_motores"/>
+        <child link="hc_sr04_3"/>
+</joint> 
+
+
+<!-- Sensor izquierda -->
+<link name="hc_sr04_1">
+    <visual>
+	<origin rpy="0 1.5708 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/sensor.dae"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 1.5708 0" xyz="-0.03 0 0"/>
+      <geometry>
+        <mesh filename="package://my6lbot_description/meshes/collision_sensor.dae"/>
+      </geometry>
+    </collision>
+    <inertial>
+	<origin rpy="0 0 0" xyz="0.0264374 -0.0028550 0.2141432"/>    
+	<mass value="0.000627506"/>
+      <inertia ixx="0.000014895" ixy="-0.000000442" ixz="0.000003847" iyy="0.000016911" iyz="-0.000000146" izz="0.000005403"/> 
+    </inertial>
+</link> 
+
+<!-- Joint sensor izquierda con placa control de motores -->
+<joint name="sensor_izqda" type="fixed">
+        <origin xyz="0 -0.29 0.15" rpy="0 0 -0.785398"/>
+        <parent link="control_motores"/>
+        <child link="hc_sr04_1"/>
+</joint> 
+
+
+<!-- IMU sensor  -->
+<link name="IMU_link">
+  <inertial>
+    <mass value="0.001"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.000001" iyz="0" izz="0.0001"/>
+  </inertial>
+  <visual>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <geometry>
+      <box size="0.01 0.01 0.01"/>
+    </geometry>
+  </visual>
+  <collision>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <geometry>
+      <box size=".01 .01 .01"/>
+    </geometry>
+  </collision>
+</link>
+
+<!-- Joint sensor IMU con base_link -->
+<joint name="IMU_joint" type="fixed">
+    <origin xyz="0 0 0.39" rpy="0 0 0"/> 
+    <parent link="base_link"/>
+    <child link="IMU_link"/>
+</joint>
+
+
+
+
+<!-- Plugins -->
+
+<!-- Plugin diferencial para el movimiento de las 6 ruedas -->
+<gazebo>
+      <plugin name="diffdrive_plugin_multiwheel" filename="libdiffdrive_plugin_multi_wheel.so">
+        <alwaysOn>true</alwaysOn>
+        <updateRate>25.0</updateRate>
+        <leftJoints>rueda_eje_centro_izqda rueda_eje_izqda_abajo rueda_eje_izqda_arriba</leftJoints>
+        <rightJoints>rueda_eje_centro_drcha rueda_eje_drcha_arriba rueda_eje_drcha_abajo</rightJoints>
+        <wheelSeparation>1</wheelSeparation>
+        <wheelDiameter>0.35</wheelDiameter>
+        <torque>50000</torque>
+      <!--<robotNamespace></robotNamespace> No estaba puesto-->
+        <robotBaseFrame>base_link</robotBaseFrame>
+	<odometryFrame>odom</odometryFrame>
+        <commandTopic>cmd_vel</commandTopic>
+	<odometryTopic>odom</odometryTopic>
+        <publishOdometryTf>0</publishOdometryTf>
+        <publishOdometryMsg>1</publishOdometryMsg>
+      </plugin>
+</gazebo>
+
+<!-- Plugin Cámara Kinect-->
+
+<gazebo reference="camera_link">
+    <sensor type="depth" name="camera">
+      <pose>0.005 0.018 0.013 0 0 0</pose>
+      <always_on>true</always_on>
+      <!--<visualize>$(arg camera_visual)</visualize>-->
+      <visualize>0</visualize>
+      <camera>
+          <horizontal_fov>1.02974</horizontal_fov>
+          <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+          </image>
+          <depth_camera></depth_camera>
+          <clip>
+              <near>0.02</near>
+              <far>300</far>
+          </clip>
+      </camera>
+      <plugin name="camera_controller" filename="libgazebo_ros_openni_kinect.so">
+        <pose>0.01 0 0 0 0 0</pose>
+        <alwaysOn>true</alwaysOn>
+            <updateRate>30.0</updateRate>
+            <cameraName>camera</cameraName>
+            <frameName>camera_link</frameName>
+        <imageTopicName>image</imageTopicName>
+        <depthImageTopicName>depth/image</depthImageTopicName>
+        <pointCloudTopicName>depth/points</pointCloudTopicName>
+        <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+        <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+        <pointCloudCutoff>0.4</pointCloudCutoff>
+            <hackBaseline>0.07</hackBaseline>
+            <distortionK1>0.0</distortionK1>
+            <distortionK2>0.0</distortionK2>
+            <distortionK3>0.0</distortionK3>
+            <distortionT1>0.0</distortionT1>
+            <distortionT2>0.0</distortionT2>
+        <CxPrime>0.0</CxPrime>
+        <Cx>0.0</Cx>
+        <Cy>0.0</Cy>
+        <focalLength>0.0</focalLength>
+      </plugin>
+    </sensor>
+</gazebo>
+
+
+
+<!-- Plugins para los sersores ultrasonido -->
+
+ <!-- Plugin Sensor Izquierda -->
+<gazebo reference="hc_sr04_1">
+      <sensor type="ray" name="hc_sr04_1">
+	  <pose>-1.5708 -1.5708 -1.5708 0 0 0</pose>
+	  <visualize>true</visualize>
+	  <update_rate>30</update_rate>
+	<ray>
+          <scan>
+            <horizontal>
+      	      <samples>32</samples>
+      	      <resolution>1</resolution>
+      	      <min_angle>-0.3926991</min_angle>
+      	      <max_angle>0.3926991</max_angle>
+            </horizontal>
+	 <!--   <vertical>
+              <samples>5</samples>
+              <resolution>1</resolution>
+              <min_angle>-16</min_angle>
+      	      <max_angle>16</max_angle>
+            </vertical>-->
+          </scan>
+          <range>
+            <min>0.02</min>
+            <max>3</max> <!-- El máx rango según datacheet es 4 pero pondremos 3 por la representación en Gazebo -->
+            <resolution>0.02</resolution>
+          </range>
+	  <noise>
+            <mean>0.0</mean>
+            <stddev>0.02</stddev>
+          </noise>
+	</ray>
+	<plugin name="hc_sr04_1_plugin" filename="libgazebo_ros_range.so">
+	  <gaussianNoise>0.005</gaussianNoise>
+	  <always_on>true</always_on>
+	  <update_rate>30</update_rate>
+          <topicName>hc_sr04_1</topicName>
+          <frameName>hc_sr04_1</frameName>
+	  <frameId>hc_sr04_1</frameId>
+	  <fov>32</fov>
+	  <radiation>ultrasound</radiation>
+	</plugin>
+      </sensor>
+</gazebo>
+
+
+ <!-- Plugin Sensor Derecha-->
+<gazebo reference="hc_sr04_3">
+      <sensor type="ray" name="hc_sr04_3">
+	  <pose>0 0 0 0 0 1.5708</pose>
+	  <visualize>true</visualize>
+	  <update_rate>30</update_rate>
+	<ray>
+          <scan>
+            <horizontal>
+      	      <samples>32</samples>
+      	      <resolution>1</resolution>
+      	      <min_angle>-0.3926991</min_angle>
+      	      <max_angle>0.3926991</max_angle>
+            </horizontal>
+	 <!--   <vertical>
+              <samples>5</samples>
+              <resolution>1</resolution>
+              <min_angle>-16</min_angle>
+      	      <max_angle>16</max_angle>
+            </vertical>-->
+          </scan>
+          <range>
+            <min>0.02</min>
+            <max>3</max> <!-- El máx rango según datacheet es 4 pero pondremos 3 por la representación en Gazebo -->
+            <resolution>0.02</resolution>
+          </range>
+	</ray>
+	<plugin name="hc_sr04_3_plugin" filename="libgazebo_ros_range.so">
+	  <gaussianNoise>0.005</gaussianNoise>
+	  <always_on>true</always_on>
+	  <update_rate>30</update_rate>
+          <topicName>hc_sr04_3</topicName>
+          <frameName>hc_sr04_3</frameName>
+	  <frameId>hc_sr04_3</frameId>
+	  <fov>32</fov>
+	  <radiation>ultrasound</radiation>
+	</plugin>
+      </sensor>
+</gazebo>
+
+
+<!-- Plugin Sensor Central -->
+ <gazebo reference="hc_sr04_2">
+      <sensor type="ray" name="hc_sr04_2">
+	  <pose>0 0 0 0 0 0</pose>
+	  <update_rate>30</update_rate>
+	  <visualize>true</visualize>
+	<ray>
+          <scan>
+            <horizontal>
+      	      <samples>32</samples>
+      	      <resolution>1</resolution>
+      	      <min_angle>-0.3926991</min_angle>
+      	      <max_angle>0.3926991</max_angle>
+            </horizontal>
+	   <!-- <vertical>
+              <samples>32</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.436332</min_angle>
+      	      <max_angle>0.436332</max_angle>
+            </vertical>-->
+          </scan>
+          <range>
+            <min>0.02</min>
+            <max>3</max> <!-- El máx rango según datacheet es 4 pero pondremos 3 por la representación en Gazebo -->
+            <resolution>0.02</resolution>
+          </range>
+	</ray>
+	<plugin name="hc_sr04_2_plugin" filename="libgazebo_ros_range.so">
+	  <gaussianNoise>0.005</gaussianNoise>
+	  <always_on>true</always_on>
+	  <update_rate>30</update_rate>
+          <topicName>hc_sr04_2</topicName>
+          <frameName>hc_sr04_2</frameName>
+	  <frameId>hc_sr04_2</frameId>
+	  <fov>32</fov>
+	  <radiation>ultrasound</radiation>
+	</plugin>
+      </sensor>
+</gazebo>
+
+
+
+<!-- IMU Sensor -->
+
+<gazebo>
+    <plugin name="gazebo_ros_imu_controller" filename="libhector_gazebo_ros_imu.so"> <!-- libgazebo_ros_imu.so, ¿no funciona?-->
+      <turnGravityOff>false</turnGravityOff>
+      <alwaysOn>true</alwaysOn>
+      <bodyName>IMU_link</bodyName>
+      <frameName>IMU_link</frameName>
+      <frameId>IMU_link</frameId>
+      <topicName>imu</topicName>
+      <serviceName>imu_service</serviceName>
+      <gaussianNoise>0.0</gaussianNoise>
+      <rpyOffsets>0 0 0</rpyOffsets>
+      <updateRate>30.0</updateRate>
+    </plugin>
+</gazebo>
+
+</robot>

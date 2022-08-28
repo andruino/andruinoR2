@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+     <!--<param name="/use_sim_time" value="true" />-->
+     <!--<arg name="gui" default="false" />-->
+     <arg name="model" default="$(find my6lbot_description)/urdf/my6lbot.urdf"/>
+   <!-- <arg name="model" default="$(find xacro)/xacro.py $(find my6lbot_description)/urdf/my6lbot.xacro)"/>-->
+     <arg name="gui" default="false" />
+     <!--<param name="robot_description" textfile="$(arg model)"/>-->
+     <param name="robot_description" textfile="$(arg model)"/>
+     <param name="use_gui" value="$(arg gui)"/>
+     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" /><!-- -->
+     <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+     <!--<node name="state_publisher" pkg="gazebo_multi_robot" type="state_publisher" />-->
+</launch>
+
+

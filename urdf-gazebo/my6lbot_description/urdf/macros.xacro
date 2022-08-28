@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+
+<xacro:include filename="$(find my6lbot_description)/urdf/my6lbot.xacro"/>
+
+<robot>
+
+<macro name="inercia_pata_cuad">
+           <inertia ixx="0.000000155" ixy="-0.000000026" ixz="-0.000000005" iyy="0.000000099" iyz="-0.000000001" izz="0.000000250"/>
+</macro>
+
+</robot>
