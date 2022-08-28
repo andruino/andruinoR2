@@ -9,11 +9,10 @@ int value = 0;
 int moveMI = 0;
 int moveMD = 0;
 //Valores de los sensores, LDRdiff y LDRmedia
-int LDRIzq = 0; //sustituir por valores (3,4,5) !!!!
+int LDRIzq = 0; 
 int LDRCen = 0;
 int LDRDer = 0;
 int LDRdiff = 0; //diferencia antes del ensayo
-//int LDRsigno = 0;
 int LDRdiffpost = 0; // diferencia después del ensayo
 int LDRmedia = 0; //media antes del ensayo
 int LDRmediapost = 0; // media despues del ensayo
@@ -23,11 +22,10 @@ int LDRCenpost = 0;
 
 int LDROffset = 0;
 
-int USIzq = 0; //sustituir por valores (3,4,5) !!!!
+int USIzq = 0; 
 int USCen = 0;
 int USDer = 0;
 int USdiff = 0; //diferencia antes del ensayo
-//int LDRsigno = 0;
 int USdiffpost = 0; // diferencia después del ensayo
 int USmedia = 0; //media antes del ensayo
 int USmediapost = 0; // media despues del ensayo
@@ -40,11 +38,11 @@ int USOffset = 0;
 
 int fila; // Fila de la matriz
 
-int BCMD[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; //Matrices sustituidas por vectores por bug en compilador
+int BCMD[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; 
 int BCMI[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-int auxX; //sutituir por i
-int auxY; //sustitir por j
+int auxX; 
+int auxY; 
 int i;
 int j;
 //Fin de  Test 3
@@ -61,7 +59,6 @@ void Test03iiittt()
 
 void Test03Loop()
 {
-	     //Programa del 2010
       /*
       //Lee los valores de las LDR y calcula sus diferencias
       LDRIzq = analogRead(analogInputIzq);
@@ -272,8 +269,7 @@ void Test03Loop()
 
             }
       */
-      //Fin del programa de 2010
-
+    
 	
 	
 	

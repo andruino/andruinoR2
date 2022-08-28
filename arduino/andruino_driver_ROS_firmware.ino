@@ -241,7 +241,7 @@ void loop()
 
   }
 
-  //Estimación (x,y), tras recibir un comando de Twist. Supone que donde se enciende es el 0,0 y el azimut 0 el que indica el giróscopo (Drift!!!!: FALTA Mejorarlo usando los sensores de Ultrasonidos)
+  //Estimación (x,y), tras recibir un comando de Twist. Supone que donde se enciende es el 0,0 y el azimut 0 el que indica el giróscopo
   //Calculo de la posición x,y,omega (para valores del estado del rango de 2000's). Basada en la geometría.
   if (estado == 2010 || estado == 1060) { //Anda en línea recta
     //x += (distancia - distancia_anterior) * cos(azimut_odometry);
@@ -284,14 +284,10 @@ void loop()
     Serial.print((y * 1000.0), 4);
     Serial.print("ww");
     Serial.print(azimut_odometry_iiikkk, 4);
-    //Serial.print(String((int)(azimut * 1000)));
-    //Serial.print(String((int)(azimut_odometry * 1000)));
-    //Serial.print( String((int)(1000.0*atan2(sin(azimut_odometry), cos(azimut_odometry)))));
     Serial.print("ww");
-    Serial.print(String(estado)); //Cambio septiembre 2016
+    Serial.print(String(estado)); 
     Serial.print("ww");
     Serial.println("###"); // Fin de mensaje
-    //Serial.println("");
     //Serial.println(String(dtLoop) + "ww" + distancia*1000.0 + "ww" + x*1000.0 + "ww" + y*1000.0 + "ww" + azimut_odometry_iiikkk + "ww" + String(estado) + "ww###");
     Serial.flush();
 
@@ -342,7 +338,7 @@ void loop()
 														case 108: Test08iiiaaa(); break;
 														case 110: Test10iiiaaa(); break;
 														case 111: Test11iiiaaa(); break;
-                            //case 113: Test13iiiaaa(); break;
+                         
 														case 114: Test14iiiaaa(); break;
 														case 200:
 														case 201:
@@ -395,7 +391,7 @@ void loop()
 		}
 		else if (inputString.startsWith("iiibbb")){
 		                     	// iiibbbXXXww### donde XXX es la correlación respecto al origen (destino buscado)
-													//LDROffSet=beacon; // PRUEBA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+													
 		}
 
     else if (inputString.startsWith("iiinnn")){ //Recibimos respuesta al test de sincronización
@@ -404,17 +400,7 @@ void loop()
                           trozo2Str = inputString.substring(inputString.indexOf("ww") + 2, inputString.indexOf("dd")); //Tomamos secuencia
                           trozo3Str = inputString.substring(inputString.indexOf("dd") + 2, inputString.indexOf("ww###")); //Tomamos fecha
 
-                          //retardo = (retardo - trozo1Str.toInt())/2;
 
-//                          Serial.print("oooccc");
-//                          Serial.print(String(estado));
-//                          Serial.print("ww");
-//                          Serial.print(tiempo2, 8);
-//                          Serial.print("ww");
-//                          Serial.print(trozo1Str);
-//                          Serial.print("ww");
-//                          Serial.print(trozo2Str);
-//                          Serial.println("ww###");
                           Serial.println("oooccc" + String(estado) + "ww" + tiempo2  + "ww" + trozo1Str + "ww" + trozo2Str + "ww" + trozo3Str + "ww###");
                           Serial.flush();
                           //delay(300);
@@ -460,7 +446,6 @@ void loop()
 // Ecuación de la recta.
 float interpola(float x, float x_min, float y_min, float x_max, float y_max)
 {
-  //Lo hace a una recta, pero quizás fuese mejor más puntos.MIRAR!!!
   //http://www.matematicasvisuales.com/html/analisis/interpolacion/lagrange.html
   //Debe existir librería
   float y;
@@ -507,7 +492,6 @@ void serialEvent() {
   // De otro modo se podrían seguir añadiendo caracteres al inputstring mientras se está procesando y
   // ejecutando el primer comando, y, como después de procesarlo, se hace inputString="" se podrían perder
   // trozo de los mensajes.  
-  //while (Serial.available()) {
   while (!commandComplete && Serial.available()) {
 
     char inChar = (char)Serial.read();

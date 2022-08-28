@@ -43,14 +43,12 @@ void Test04iiiaaa()
         // Despues de 10 segundos girando y aumentando el PWM en 10, cambia de sentido
 
         if ((tiempoOmega + 5000) < millis() && incPWM <= ((int)parameters[18])) {
-          //pararMotores();
-          //delay(500);
           tiempoOmega = millis();
           incPWM = incPWM + 10;
-        } else if (incPWM > ((int)parameters[18]) && estado == 1041) { /*MODIFICADO*/
+        } else if (incPWM > ((int)parameters[18]) && estado == 1041) {
           estado = 0;
           pararMotores();
-        } else if (incPWM > ((int)parameters[18]) && (estado >= 1040 && estado < 1041)) { /*MODIFICADO*/
+        } else if (incPWM > ((int)parameters[18]) && (estado >= 1040 && estado < 1041)) { 
           //Cambio de sentido de giro
           pararMotores();
           delay(500);

@@ -135,7 +135,6 @@ void Test16iiiqqq()
         //Se detiene
         pararMotores();
         auxX = 0;
-        //delay(50); //Cambiar por comparacion con timer para que no pare la recepcion de órdenes!!!!
 
         // Verifica resultado de movimiento realizado.
         LDRIzqpost = analogRead(analogInputIzq);

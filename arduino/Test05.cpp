@@ -2,7 +2,7 @@
 #include "defines.h"
 #include "CtrlMotores.h"
 
-#define Kp1050 40 //R2D PENDIENTE Constate proprocional del PD del test 5
+#define Kp1050 40 
 
 
 extern int estado;

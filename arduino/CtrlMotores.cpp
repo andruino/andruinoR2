@@ -92,24 +92,6 @@ int motoresPWM(int motor_izquierdo, int motor_derecho) {
     saturacion += 10;
   }
 
-  // Arranque
-  /*
-  if (motor_derecho > 0) {
-    analogWrite(motorDAvance, 250);
-    analogWrite(motorDRetroceso, 0);
-  } else {
-    analogWrite(motorDAvance, 0);
-    analogWrite(motorDRetroceso, 250);
-  }
-
-  if (motor_izquierdo > 0) {
-    analogWrite(motorIAvance, 250);
-    analogWrite(motorIRetroceso, 0);
-  } else {
-    analogWrite(motorIAvance, 0);
-    analogWrite(motorIRetroceso, 250);
-  }
-  */
 
   // Sentido de giro
   if (motor_derecho > 0) {
@@ -144,7 +126,7 @@ int motoresPWM(int motor_izquierdo, int motor_derecho) {
 
 
 
-//Cinemática inversa uniciclo (PENDIENTE VALIDAR !!!!!!!!!!!!!!!!!!!!!. ESPECIALMENTE EL SIGNO DE cmd_ang!!!)
+//Cinemática inversa uniciclo 
 float cmd_omegaDer(float cmd_vel, float cmd_ang) {
 
   return (cmd_vel  + (parameters[3] * DISTANCIA_RUEDAS * cmd_ang / 2)) / (parameters[2] * RADIO_RUEDA);
@@ -157,7 +139,7 @@ float cmd_omegaIzq(float cmd_vel, float cmd_ang) {
 }
 
 
-//Relación omea / PWM (PEnDIENTE DE CAMBIAR VALORES FIJOS POR CALIBRACION !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!)
+//Relación omea / PWM 
 int cmd_PWMDer(float omegaDer) {
 
   return (int)((parameters[7] * abs(omegaDer)) + parameters[8]) * (omegaDer / abs(omegaDer));
@@ -190,15 +172,12 @@ int movimiento_linea_recta(int PWM_I, int PWM_D) {
   PWM_I = PWM_I + salPID;
   PWM_D = PWM_D - salPID;
 
-  //SATURACION.OJO PARAR INTEGRAL del  PID!!!!!!!!!!!!!!!!!
   motoresPWM(PWM_I, PWM_D);
 
 
 }
 
 int inicia_arco() {
-
-  //pararMotores();//Da problemas en teleoperacion
 
   estadoPID = -1;
 
@@ -209,8 +188,6 @@ int inicia_arco() {
 }
 
 int inicia_linea_recta() {
-
-  //pararMotores(); //Da problemas en teleoperacion
 
   //inicia PID
   estadoPID = -1;
@@ -240,12 +217,11 @@ int movimiento_giro() {
   int PWM_I;
   int PWM_D;
 
-  outPD = pd(); //Sólo PD, EN REALIDAD PID GIRO
+  outPD = pd(); 
 
   PWM_I = outPD + (((int)parameters[19]) * (outPD / abs(outPD)));
   PWM_D =  - outPD + (-1) * (((int)parameters[19]) * (outPD / abs(outPD)));
 
-  //SATURACION.OJO PARAR INTEGRAL del  PID!!!!!!!!!!!!!!!!!
   motoresPWM(PWM_I, PWM_D);
 
 
@@ -257,40 +233,22 @@ int inicia_giro(float azimutGira) {
   estadoPID == -1; // Sólo PD para guirar
   outPD = 0;
 
-  //Falta controlar que azimutGira esté entre -pi y pi
-
   azimutRef = azimutGira; // Establece la referencia del azimut
 
   outPID = 0;
 
   azimutAnterior = azimut;
 
-  //Arranque de motores
-  /*
-  if (azimutRef >= 0) {
-    //Arranque de motores
-    analogWrite(motorIAvance, 250); //Valores calculados a mano OJO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    analogWrite(motorIRetroceso, 0);
-    analogWrite(motorDAvance, 0);
-    analogWrite(motorDRetroceso, 240);
-  } else {
-    analogWrite(motorIAvance, 0); //Valores calculados a mano OJO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    analogWrite(motorIRetroceso, 250);
-    analogWrite(motorDAvance, 240);
-    analogWrite(motorDRetroceso, 0);
-  }
-  */
+
 }
 
 
-//PD    EN REALIDAD PID_GIRO
 int pd() {
 
 
   //P
   errorAzimut = azimutRef - azimut; //Redefine el error
   errorAzimut = (float)  atan2((double)sin(errorAzimut), (double)cos(errorAzimut));
-  //outPID =  kpd * (errorAzimut);
 
   //I
   if (estadoPID == -1) {
@@ -309,8 +267,6 @@ int pd() {
   if (estadoPID == -1) {
     estadoPID = 0; // Tras la primera vez que se ejecuta pasa a estado 0, para comenzar a calcular el error D
   } else {
-    //if ((millis() - tiempoAzimutAnterior) != 0 && errorAzimut>=0.2)
-    //if ((millis() - tiempoAzimutAnterior) != 0 && abs(errorAzimut) >= 0.05)
     if ((millis() - tiempoAzimutAnterior) != 0)
       errorAzimutD =  (1000 * (errorAzimut - errorAzimutAnterior)) / (millis() - tiempoAzimutAnterior);
     else
@@ -348,9 +304,6 @@ int pid_arco() {
     outPID_arco =  ((int)parameters[15]) * errorOmega;
   }
 
-  //I
-
-  //D
 
   return (int)((outPID_arco));
 
@@ -382,20 +335,12 @@ int pid() {
   if (estadoPID == -1) {
     estadoPID = 0; // Tras la primera vez que se ejecuta pasa a estado 0, para comenzar a calcular el error D
   } else {
-    //if ((millis() - tiempoAzimutAnterior) != 0 && errorAzimut>=0.2)
-    //if ((millis() - tiempoAzimutAnterior) != 0 && abs(errorAzimut) >= 0.05)
     if ((millis() - tiempoAzimutAnterior) != 0)
       errorAzimutD =  (1000 * (errorAzimut - errorAzimutAnterior)) / (millis() - tiempoAzimutAnterior);
     else
       errorAzimutD = 0;
   }
 
-
-  //outPID =  (((int)parameters[9]) * errorAzimut) + (((int)parameters[10]) * errorAzimutI) + (((int)parameters[11])/10) * errorAzimutD ;
-
-
-
-  //outPID =  ((int)parameters[9]) * (errorAzimut + (2 * errorAzimutI) + (errorAzimutD)/4);
   outPID =  (((int)parameters[9]) * (errorAzimut)) + (((int)parameters[10]) * (errorAzimutI / 1000)) + (((int)parameters[11]) * errorAzimutD);
   //Actualización de valores
   errorAzimutAnterior = errorAzimut;

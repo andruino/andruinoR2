@@ -43,24 +43,23 @@ int cmd_PWMIzq(float omegaIzq);
 
 
 
-      // Estado 1060, Pruebas PID sobre el angulo con TYPE_GAME_ORIENTATION_VECTOR, se debe mover en línea recta durante 10 sg
+      // Estado 1060, PID sobre el angulo con TYPE_GAME_ORIENTATION_VECTOR, se debe mover en línea recta durante unos sg
 
 
 void Test06iiiaaa()
 {
 	  
-        //Durante dos segundos
-        //if ((tiempoEstado1060 + 6000) > millis()) { Se modificó para bajar un poco el tiempo
+        
+     
         if ((tiempoEstado1060 + 6000) > millis()) {
-          //OJO ! Velocidad fija para 0.15 m/Sg
+          //Velocidad fija para 0.15 m/Sg
           cmdVel = 0.1 * parameters[0];
-          //movimiento_linea_recta(225, 215); //Valores a la mitad del rango PWM posible de 180 a 255. Haciendo Wd=-Wd para que camine recto y usando las ecuaciones
+          //Valores a la mitad del rango PWM posible de 180 a 255. Haciendo Wd=-Wd para que camine recto y usando las ecuaciones
           movimiento_linea_recta((cmd_PWMIzq(cmd_omegaIzq(cmdVel, 0))), (cmd_PWMDer(cmd_omegaDer(cmdVel, 0))));
           // lineales que relacionan el w con el PWM, sale que para que ande recto debe ser PWM_I=225 y PWM_D=215
           azimut_odometry_iiikkk += incAzimut;
           secuencia++;
-          //Serial.print("oooccc" + String(azimut) + "ww"  + String(millis() - tiempoEstado1060) + "ww"  + String(azimutRef) + "ww" + String(estadoPID) +  "ww" + String(salPID) + "ww" + String(errorAzimut) +  "ww" + String(errorAzimutI) + "ww" + String(errorAzimutD) + "ww"); //En radianes
-  		  Serial.print("oooccc");
+          Serial.print("oooccc");
           Serial.print(estado, 4);
           Serial.print("ww");
           Serial.print(azimut, 4);

@@ -32,8 +32,7 @@ void Twistiiiaaa()
       if (estado == 2010) {
         azimut_odometry_iiikkk = azimut_odometry_iiikkk + incAzimut;
         movimiento_linea_recta((cmd_PWMIzq(cmd_omegaIzq(parameters[0] * cmdVel, 0))), (cmd_PWMDer(cmd_omegaDer(parameters[0] * cmdVel, 0))));
-        //azimut_odometry += 0; //Supone que hace la línea recta y no se desvía ??? podria ser ErrorAzimut*Cos(incAzimut) PENSAR??
-        //azimut_odometry = azimut_odometry_iiikkk + errorAzimut; //Considera la desviación del ángulo usada en el PID
+        
 
       }
       // Fin Estado 2010
@@ -41,28 +40,24 @@ void Twistiiiaaa()
       // Estado 2020, giro puro
       if (estado == 2020) {
         azimut_odometry += incAzimut;
-        //azimut_odometry =  atan2(sin(azimut_odometry), cos(azimut_odometry)); //Limita a -pi pi . HAcer Funcion !!!
+       
       }
-      // Fin Estado 2010
+      // Fin Estado 2020
 
 
       // Estado 2000, anda haciendo un arco
       if (estado == 2000) {
-        //if (incAzimut != azimut) { //Realiza un arco de circunferencia, vel!=0 y omega!=0
 
-          //Considerando que incAzimut es pequeña estimo la velocidad lineal
-          //vel_estimada = 1000 * (ICCR * incAzimut) / dtAzimut;
 
           movimiento_arco(cmd_PWMIzq(cmd_omegaIzq(parameters[0] * cmdVel, parameters[1] * cmdOmega)), cmd_PWMDer(cmd_omegaDer(parameters[0] * cmdVel, parameters[1] * cmdOmega)));
 
           // Calculo de x y para odometria
-          //x +=  ICCR * (sin(azimut_odometry + incAzimut) - sin(azimut_odometry));   COMENTADO POR ALEJANDRO
+          //x +=  ICCR * (sin(azimut_odometry + incAzimut) - sin(azimut_odometry)); 
           //y += ICCR * (cos(azimut_odometry) - cos(azimut_odometry + incAzimut));
 
           // Actualizacion de azimut para odometria
           azimut_odometry += incAzimut;
-          //azimut_odometry =  atan2(sin(azimut_odometry), cos(azimut_odometry)); //Limita a -pi pi . HAcer Funcion !!!
-
+        
         //}
       }
       // Fin Estado 2000
@@ -121,10 +116,9 @@ void Twistiiikkk()
         // de www.doc.ic.ac.uk/~ajd/Robotics Lecture 2
         // R=W(vr+vl)/2(vr-vl)
         ICCR = 0.5 * (parameters[3] / parameters[4]) * DISTANCIA_RUEDAS * ( cmd_omegaDer(parameters[0] * cmdVel, parameters[1] * cmdOmega) + cmd_omegaIzq(parameters[0] * cmdVel, parameters[1] * cmdOmega) ) / ( cmd_omegaDer(parameters[0] * cmdVel, parameters[1] * cmdOmega) - cmd_omegaIzq(parameters[0] * cmdVel, parameters[1] * cmdOmega) );
-        //ICCR = 0*5* DISTANCIA_RUEDAS * ( cmd_omegaDer(parameters[0] * cmdVel, 3 * parameters[1] * cmdOmega) + cmd_omegaIzq(parameters[0] * cmdVel, 3* parameters[1] * cmdOmega) ) / ( cmd_omegaDer(parameters[0] * cmdVel, 3 * parameters[1] * cmdOmega) - cmd_omegaIzq(parameters[0] * cmdVel, 3 * parameters[1] * cmdOmega) );
+       
 
-        inicia_arco(); //030116
-
+        inicia_arco(); 
 
       }
 	
